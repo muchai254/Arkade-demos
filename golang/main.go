@@ -130,7 +130,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer wallet.Stop()
-	err = wallet.Init(ctx, "https://arkade.computer", privateKey, "password")
+	err = wallet.Init(ctx, "https://arkade.computer", PRIVATE_KEY, "password")
 	if err != nil {
 		log.Fatal(err)
 	}
