@@ -1,2 +1,2 @@
-typescript/node_modules/*
-golang/golang-asset-demo
+*/typescript/node_modules/*
+*/golang/golang-*-demo
