@@ -28,12 +28,12 @@ console.log('Setting up Alice identity...')
 const aliceIdentity = MnemonicIdentity.fromMnemonic(ALICE_SEED, {});
 const alicePubkey = await aliceIdentity.xOnlyPublicKey()
 
-console.log('Constructing simple address with collaborative spend path...')
+console.log('Generating simple address with collaborative spend path...')
 const collaborativePath = MultisigTapscript.encode({
   pubkeys: [operatorPubkey, alicePubkey],
 }).script
 const vtxoScript = new VtxoScript([collaborativePath]);
-console.log('Address:', vtxoScript.address(networks.bitcoin.hrp, operatorPubkey).encode())
+console.log('Generated address:', vtxoScript.address(networks.bitcoin.hrp, operatorPubkey).encode())
 
 console.log('Connecting to indexer...')
 const indexerProvider = new RestIndexerProvider('https://arkade.computer')
@@ -83,14 +83,14 @@ if (balance > 0n) {
     ));
 
   console.log('Generated Arkade transaction:', [base64.encode(tx.toPSBT())])
-  console.log('Generated unsigned checkpoints:', checkpointTxs.map(tx => base64.encode(tx.toPSBT())))
+  console.log('Generated unsigned checkpoint transactions:', checkpointTxs.map(tx => base64.encode(tx.toPSBT())))
 
   let signedTx = tx;
   console.log('Signing with Alice...')
   signedTx = await aliceIdentity.sign(signedTx)
   console.log('Signed Arkade transaction:', [base64.encode(signedTx.toPSBT())])
 
-  console.log('Submitting Arkade transaction with unsigned checkpoint PSBTs to operator...')
+  console.log('Submitting Arkade transaction with unsigned checkpoint transactions to operator...')
   const { arkTxid: txid, signedCheckpointTxs } = await arkProvider.submitTx(
     base64.encode(signedTx.toPSBT()),
     checkpointTxs.map((checkpointTx) => base64.encode(checkpointTx.toPSBT()))
