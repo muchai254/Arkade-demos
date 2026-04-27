@@ -86,15 +86,15 @@ const operatorIdentity = ReadonlySingleKey.fromPublicKey(hex.decode(providerInfo
 const operatorPubkey = await operatorIdentity.xOnlyPublicKey();
 
 console.log('Setting up arbiter identity...')
-const arbiterIdentity = MnemonicIdentity.fromMnemonic(ARBITER_SEED, {});
+const arbiterIdentity = MnemonicIdentity.fromMnemonic(ARBITER_SEED);
 const arbiterPubkey = await arbiterIdentity.xOnlyPublicKey();
 
 console.log('Setting up Alice identity...')
-const aliceIdentity = MnemonicIdentity.fromMnemonic(ALICE_SEED, {});
+const aliceIdentity = MnemonicIdentity.fromMnemonic(ALICE_SEED);
 const alicePubkey = await aliceIdentity.xOnlyPublicKey()
 
 console.log('Setting up Bob identity...')
-const bobIdentity = MnemonicIdentity.fromMnemonic(BOB_SEED, {});
+const bobIdentity = MnemonicIdentity.fromMnemonic(BOB_SEED);
 const bobPubkey = await bobIdentity.xOnlyPublicKey()
 
 console.log('Generating escrow address...')
