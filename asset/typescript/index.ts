@@ -9,6 +9,12 @@ import {
 
 // decode from nsec using https://www.nostrly.com/nip-19-entity-decoder/
 const PRIVATE_KEY = "";
+const identity = SingleKey.fromHex(PRIVATE_KEY);
+try {
+  identity.xOnlyPublicKey()
+} catch (_e) {
+  throw new Error("PRIVATE_KEY must be a valid hex-encoded private key")
+}
 
 // specify asset info
 const metadata: AssetMetadata = {
@@ -42,7 +48,7 @@ const summarizeBalances = async (balance: WalletBalance) => {
 
 // create wallet
 const wallet = await Wallet.create({
-  identity: SingleKey.fromHex(PRIVATE_KEY),
+  identity,
   arkServerUrl: 'https://arkade.computer',
   settlementConfig: false, // Don't auto-renew VTXOs
   storage: {
