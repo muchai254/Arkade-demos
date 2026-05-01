@@ -20,4 +20,4 @@ Demonstrates:
     - anchor outputs (automatically added by protocol)
 
 ### TypeScript
-`pnpm install && pnpm run dev`
+`pnpm install && pnpm dev`

@@ -13,4 +13,4 @@ Demonstrates:
 Related: [boarding-address](https://github.com/arkade-os/demos/tree/master/boarding-address)
 
 ### TypeScript
-`pnpm install && pnpm run dev`
+`pnpm install && pnpm dev`

@@ -14,7 +14,7 @@ Demonstrates:
 To get started, go to https://arkade.money > Settings > Backup, take the `nsec...` key, decode it on https://www.nostrly.com/nip-19-entity-decoder, and add it as the top-level `PRIVATE_KEY` in both files.
 
 ### TypeScript
-`pnpm install && pnpm run dev`
+`pnpm install && pnpm dev`
 
 ### Golang
 `gofmt -w main.go && go run .`

@@ -13,4 +13,4 @@ Demonstrates:
 Related: [onchain-address](https://github.com/arkade-os/demos/tree/master/onchain-address)
 
 ### TypeScript
-`pnpm install && pnpm run dev`
+`pnpm install && pnpm dev`

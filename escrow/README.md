@@ -19,4 +19,4 @@ Demonstrates:
 > *Unilateral exit logic is not implemented in this example yet, see https://arkade-os.github.io/ts-sdk/#unilateral-exit for more.
 
 ### TypeScript
-`pnpm install && pnpm run dev`
+`pnpm install && pnpm dev`
