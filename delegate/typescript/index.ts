@@ -73,14 +73,14 @@ console.log("Extracted delegate info:", [
   },
 ]);
 
-console.log("Generating delegate tapscript...");
-const delegatedTapscript = new DelegateVtxo.Script({
+console.log("Generating delegated user tapscript...");
+const userScript = new DelegateVtxo.Script({
   pubKey: userPubkey,
   serverPubKey: operatorPubkey,
   delegatePubKey: delegatePubkey,
   csvTimelock: exitTimelock,
 });
-const userAddress = delegatedTapscript.address(NETWORK.hrp, operatorPubkey);
+const userAddress = userScript.address(NETWORK.hrp, operatorPubkey);
 console.log("Generated delegated user Arkade address:", [userAddress.encode()]);
 
 console.log("Connecting to indexer...");
@@ -98,9 +98,9 @@ const inputs = await indexer
       /** Add fields to allow VTXO to be spent */
       .map((input) => ({
         ...input,
-        forfeitTapLeafScript: delegatedTapscript.forfeit(),
-        intentTapLeafScript: delegatedTapscript.forfeit(),
-        tapTree: delegatedTapscript.encode(),
+        forfeitTapLeafScript: userScript.forfeit(),
+        intentTapLeafScript: userScript.forfeit(),
+        tapTree: userScript.encode(),
       })),
   );
 const inputTotal = inputs.reduce((sum, input) => sum + BigInt(input.value), 0n);
@@ -148,7 +148,7 @@ if (inputTotal >= 0n) {
     inputs
       .filter((input) => !isRecoverable(input))
       .map(async (input) => {
-        const delegateTapLeaf = delegatedTapscript.delegate();
+        const delegateTapLeaf = userScript.delegate();
         const tx = new Transaction({
           version: 3,
         });
