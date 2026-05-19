@@ -6,8 +6,8 @@
     "dev": "node index.ts"
   },
   "dependencies": {
-    "@arkade-os/sdk": "^0.4.20",
+    "@arkade-os/sdk": "^0.4.27",
     "@scure/base": "^2.2.0",
-    "@scure/btc-signer": "^2.0.1"
+    "@scure/btc-signer": "^2.2.0"
   }
 }
