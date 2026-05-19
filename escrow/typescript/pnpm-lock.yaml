@@ -9,23 +9,23 @@ importers:
   .:
     dependencies:
       '@arkade-os/sdk':
-        specifier: ^0.4.10
-        version: 0.4.20
+        specifier: ^0.4.20
+        version: 0.4.27
       '@scure/base':
-        specifier: ^2.0.0
+        specifier: ^2.2.0
         version: 2.2.0
 
 packages:
 
-  '@arkade-os/sdk@0.4.20':
-    resolution: {integrity: sha512-QgIfvhfSaDf7a7iZiu+XnG3KzC/DhXFh07LAGqSdy4vX8w567tAGhdGX5bj1CKDW9u+ok/yVgCORUVLmkUaCEg==}
+  '@arkade-os/sdk@0.4.27':
+    resolution: {integrity: sha512-LzfvXFAWcl7O6Jl/uljecs8uXovhHVJQKuh9U/DlK657T/sfRcDWlD/Eq1596mm509p3bBNJvIt4uRh133Lq+A==}
     engines: {node: '>=22.12.0 <23', pnpm: '>=10.25.0 <11'}
     peerDependencies:
       '@react-native-async-storage/async-storage': '>=1.0.0'
       expo: '>=54.0.0'
-      expo-background-task: ~1.0.10
-      expo-sqlite: ~16.0.10
-      expo-task-manager: ~14.0.9
+      expo-background-task: ~1.0.10 || >=55.0.0
+      expo-sqlite: ~16.0.10 || >=55.0.0
+      expo-task-manager: ~14.0.9 || >=55.0.0
     peerDependenciesMeta:
       '@react-native-async-storage/async-storage':
         optional: true
@@ -153,8 +153,8 @@ packages:
     resolution: {integrity: sha512-pBjfFqb9j2FBz7NPbnd8r2lOYanEw8ACzfKxOtHCgEGqre5QiTax5XHLVgbsiOvST0vmsHAiMtkJPvsZm77PIQ==}
     engines: {node: '>=10'}
 
-  ws@8.20.0:
-    resolution: {integrity: sha512-sAt8BhgNbzCtgGbt2OxmpuryO63ZoDk/sqaB/znQm94T4fCEsy/yV+7CdC1kJhOU9lboAEU7R3kquuycDoibVA==}
+  ws@8.20.1:
+    resolution: {integrity: sha512-It4dO0K5v//JtTXuPkfEOaI3uUN87iYPnqo/ZzqCoG3g8uhA66QUMs/SrM0YK7/NAu+r4LMh/9dq2A7k+rHs+w==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -167,7 +167,7 @@ packages:
 
 snapshots:
 
-  '@arkade-os/sdk@0.4.20':
+  '@arkade-os/sdk@0.4.27':
     dependencies:
       '@bitcoinerlab/descriptors-scure': 3.1.7
       '@marcbachmann/cel-js': 7.3.1
@@ -256,9 +256,9 @@ snapshots:
 
   bip68@1.0.4: {}
 
-  isomorphic-ws@5.0.0(ws@8.20.0):
+  isomorphic-ws@5.0.0(ws@8.20.1):
     dependencies:
-      ws: 8.20.0
+      ws: 8.20.1
 
   lodash.memoize@4.1.2: {}
 
@@ -276,10 +276,10 @@ snapshots:
 
   ws-electrumx-client@1.0.5:
     dependencies:
-      isomorphic-ws: 5.0.0(ws@8.20.0)
-      ws: 8.20.0
+      isomorphic-ws: 5.0.0(ws@8.20.1)
+      ws: 8.20.1
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  ws@8.20.0: {}
+  ws@8.20.1: {}
