@@ -1,0 +1,14 @@
+{
+  "name": "typescript-swap-to-lightning-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node index.ts"
+  },
+  "dependencies": {
+    "@arkade-os/sdk": "^0.4.27",
+    "@scure/base": "^2.2.0",
+    "@scure/btc-signer": "^2.2.0",
+    "ky": "^2.0.2"
+  }
+}
