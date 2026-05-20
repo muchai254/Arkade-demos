@@ -30,7 +30,6 @@ const OPERATOR_URL = "https://mutinynet.arkade.sh" as const;
 const DELEGATE_URL = "https://delegator.mutinynet.arkade.sh" as const;
 const BOLTZ_API = "https://api.boltz.mutinynet.arkade.sh" as const;
 
-const main = async () => {
   const isNewSwap = hex.decode(PREIMAGE).length !== 32;
   const preimage = isNewSwap ? randomBytes(32) : hex.decode(PREIMAGE);
 
@@ -220,8 +219,7 @@ Lockup address:
 - ${swap.lockupAddress}
 `);
     if (isNewSwap) {
-      console.warn(
-        `
+    throw new Error(`
 🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
 🚨          PREIMAGE and REFUND_LOCKTIME are not defined!           🚨
 🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
@@ -232,7 +230,6 @@ Lockup address:
 `,
       );
     }
-    return;
   }
 
   console.log("Connecting to indexer...");
@@ -325,6 +322,3 @@ Lockup address:
   await operator.finalizeTx(txid, finalizedCheckpointTxs);
 
   console.log("Broadcasted!", `https://arkade.space/tx/${txid}`);
-};
-
-main();
