@@ -102,20 +102,16 @@ const BOLTZ_API = "https://api.boltz.mutinynet.arkade.sh" as const;
     console.log("Fetching reverse swap limits...");
     const limits = await ky
       .get(`${BOLTZ_API}/v2/swap/reverse`)
-      .json()
-      .then(
-        (json) =>
-          json as {
-            BTC: {
-              ARK: {
-                limits: {
-                  maximal: number;
-                  minimal: number;
-                };
-              };
+      .json<{
+        BTC: {
+          ARK: {
+            limits: {
+              maximal: number;
+              minimal: number;
             };
-          },
-      )
+          };
+        };
+      }>()
       .then((limits) => ({
         min: BigInt(limits.BTC.ARK.limits.minimal),
         max: BigInt(limits.BTC.ARK.limits.maximal),
@@ -148,25 +144,21 @@ const BOLTZ_API = "https://api.boltz.mutinynet.arkade.sh" as const;
         description: "Send to Arkade address",
       },
     })
-    .json()
-    .then(
-      (json) =>
-        json as {
-          /** Arkade lockup address where Boltz will lock funds. */
-          lockupAddress: string;
-          /** Boltz's public key for the refund path. */
-          refundPublicKey: string;
-          /** Block heights for various timeout/refund scenarios. */
-          timeoutBlockHeights: {
-            refund: number;
-            unilateralClaim: number;
-            unilateralRefund: number;
-            unilateralRefundWithoutReceiver: number;
-          };
-          /** BOLT11-encoded Lightning invoice to be paid. */
-          invoice: string;
-        },
-    );
+    .json<{
+      /** Arkade lockup address where Boltz will lock funds. */
+      lockupAddress: string;
+      /** Boltz's public key for the refund path. */
+      refundPublicKey: string;
+      /** Block heights for various timeout/refund scenarios. */
+      timeoutBlockHeights: {
+        refund: number;
+        unilateralClaim: number;
+        unilateralRefund: number;
+        unilateralRefundWithoutReceiver: number;
+      };
+      /** BOLT11-encoded Lightning invoice to be paid. */
+      invoice: string;
+    }>();
   const refundPubkey = await ReadonlySingleKey.fromPublicKey(
     hex.decode(swap.refundPublicKey),
   ).xOnlyPublicKey();
