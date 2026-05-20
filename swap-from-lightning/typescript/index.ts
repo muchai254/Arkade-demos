@@ -13,10 +13,10 @@ import {
   Transaction,
   VHTLC,
 } from "@arkade-os/sdk";
-import { base64, hex } from "@scure/base";
-import { sha256 } from "@noble/hashes/sha2.js";
 import { ripemd160 } from "@noble/hashes/legacy.js";
+import { sha256 } from "@noble/hashes/sha2.js";
 import { randomBytes } from "@noble/hashes/utils.js";
+import { base64, hex } from "@scure/base";
 import ky from "ky";
 
 const PREIMAGE = "" as const;
