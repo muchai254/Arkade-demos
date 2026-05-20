@@ -1,0 +1,17 @@
+{
+  "name": "typescript-swap-from-lightning-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node index.ts"
+  },
+  "dependencies": {
+    "@arkade-os/boltz-swap": "^0.3.32",
+    "@arkade-os/sdk": "^0.4.27",
+    "@noble/hashes": "^2.2.0",
+    "@scure/base": "^2.2.0",
+    "@scure/bip39": "^2.2.0",
+    "@scure/btc-signer": "^2.2.0",
+    "ky": "^2.0.2"
+  }
+}
