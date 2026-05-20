@@ -26,7 +26,9 @@ const DUST = 330n as const;
 const DELEGATE_IN_SECONDS = 60;
 
 console.log("Setting up user identity...");
-const userIdentity = MnemonicIdentity.fromMnemonic(ALICE_SEED);
+const userIdentity = MnemonicIdentity.fromMnemonic(ALICE_SEED, {
+  isMainnet: false,
+});
 const userPubkey = await userIdentity.xOnlyPublicKey();
 
 console.log("Connecting to Arkade operator...");
