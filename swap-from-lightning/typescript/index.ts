@@ -241,7 +241,7 @@ Lockup address:
   const inputTotal = inputs.reduce((sum, input) => sum + BigInt(input.value), 0n);
 
   if (inputTotal === 0n) {
-    throw new Error(`Swap not funded.
+    throw new Error(`Lockup address not funded.
 
 Lockup address:
 - ${contractAddress.encode()}
