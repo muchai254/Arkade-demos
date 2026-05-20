@@ -244,19 +244,9 @@ Lockup address:
     .then(({ vtxos }) =>
       vtxos
         /** Filter out inputs with Arkade assets */
-        .filter((input) => !input.assets?.length)
-        /** Add fields to allow input to be spent */
-        .map((input) => ({
-          ...input,
-          forfeitTapLeafScript: userScript.forfeit(),
-          intentTapLeafScript: userScript.forfeit(),
-          tapTree: userScript.encode(),
-        })),
+        .filter((input) => !input.assets?.length),
     );
-  const inputTotal = inputs.reduce(
-    (sum, input) => sum + BigInt(input.value),
-    0n,
-  );
+  const inputTotal = inputs.reduce((sum, input) => sum + BigInt(input.value), 0n);
 
   if (inputTotal === 0n) {
     throw new Error(`Swap not funded.
