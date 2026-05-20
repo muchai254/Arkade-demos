@@ -20,7 +20,7 @@ import { base64, hex } from "@scure/base";
 import ky from "ky";
 
 const PREIMAGE = "" as const;
-const REFUND_LOCKTIME = "" as const;
+const REFUND_LOCKTIME = 0n as const;
 const INVOICE_AMOUNT = 50_000n;
 
 const ALICE_SEED =
