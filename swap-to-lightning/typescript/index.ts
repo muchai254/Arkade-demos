@@ -32,6 +32,7 @@ const userIdentity = MnemonicIdentity.fromMnemonic(ALICE_SEED, {
 });
 const userPubkey = await userIdentity.xOnlyPublicKey();
 const userPubkeyCompressed = await userIdentity.compressedPublicKey();
+console.log("User public key:", [hex.encode(userPubkey)]);
 
 console.log("Connecting to Arkade operator...");
 const operator = new RestArkProvider(OPERATOR_URL);
@@ -46,6 +47,7 @@ const exitTimelock = {
 const checkpointTapscript = CSVMultisigTapscript.decode(
   hex.decode(operatorInfo.checkpointTapscript),
 );
+console.log("Operator public key:", [hex.encode(operatorPubkey)]);
 
 console.log("Connecting to delegate...");
 const delegate = new RestDelegatorProvider(DELEGATE_URL);
@@ -53,6 +55,7 @@ const delegateInfo = await delegate.getDelegateInfo();
 const delegatePubkey = await ReadonlySingleKey.fromPublicKey(
   hex.decode(delegateInfo.pubkey),
 ).xOnlyPublicKey();
+console.log("Delegate public key:", [hex.encode(delegatePubkey)]);
 
 console.log("Generating user tapscript...");
 const userScript = new DelegateVtxo.Script({
@@ -67,7 +70,7 @@ console.log("Generated user address:", [userAddress.encode()]);
 console.log("Connecting to indexer...");
 const indexer = new RestIndexerProvider("https://mutinynet.arkade.sh");
 
-console.log("Fetching inputs...");
+console.log("Fetching inputs for user...");
 const inputs = await indexer
   .getVtxos({
     scripts: [hex.encode(userAddress.pkScript)],
@@ -79,6 +82,7 @@ const inputs = await indexer
       .filter((input) => !input.assets?.length),
   );
 const inputTotal = inputs.reduce((sum, input) => sum + BigInt(input.value), 0n);
+console.log("User balance:", [inputTotal]);
 
 if (inputTotal === 0n) {
   throw new Error(`Address not funded.
@@ -88,7 +92,7 @@ Address:
 `);
 }
 
-console.log("Validating LUD-16 address...");
+console.log("Validating LUD-16 address:", [LN_ADDRESS]);
 if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(LN_ADDRESS)) {
   throw new Error(`Invalid LN_ADDRESS`);
 }
@@ -99,6 +103,7 @@ const lud16Callback = await ky
   .get(`https://${lud16Domain}/.well-known/lnurlp/${lud16User}`)
   .json<{ callback: string }>()
   .then(({ callback }) => callback);
+console.log("Fetched LUD-16 callback:", lud16Callback);
 
 console.log("Fetching BOLT-11 invoice...");
 const invoice = await ky
@@ -111,6 +116,7 @@ const invoice = await ky
     pr: string;
   }>()
   .then(({ pr }) => pr);
+console.log("Fetched BOLT-11 invoice", [invoice]);
 
 console.log("Fetching submarine swap limits...");
 const limits = await ky
@@ -129,6 +135,7 @@ const limits = await ky
     min: BigInt(limits.ARK.BTC.limits.minimal),
     max: BigInt(limits.ARK.BTC.limits.maximal),
   }));
+console.log("Fetched submarine swap limits:", limits);
 
 if (INVOICE_AMOUNT < limits.min) {
   throw new Error(
@@ -141,7 +148,7 @@ if (INVOICE_AMOUNT > limits.max) {
   );
 }
 
-console.log("Creating swap...");
+console.log("Creating submarine swap...");
 const swap = await ky
   .post(`${BOLTZ_API}/v2/swap/submarine`, {
     json: {
@@ -157,6 +164,7 @@ const swap = await ky
     /** Arkade lockup address to send funds to. */
     address: string;
   }>();
+console.log("Created submarine swap:", swap);
 
 const swapAddress = ArkAddress.decode(swap.address);
 const swapAmount = BigInt(swap.expectedAmount);
@@ -184,7 +192,7 @@ const changeOutput =
         amount: changeAmount,
       };
 
-console.log("Generating transaction...");
+console.log("Funding lockup address...");
 const { arkTx: tx, checkpoints: checkpointTxs } = buildOffchainTx(
   inputs.map(({ txid, vout, value }) => ({
     txid,
