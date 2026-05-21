@@ -86,7 +86,7 @@ const userAddress = userScript.address(NETWORK.hrp, operatorPubkey);
 console.log("Generated delegated user Arkade address:", [userAddress.encode()]);
 
 console.log("Connecting to indexer...");
-const indexer = new RestIndexerProvider("https://mutinynet.arkade.sh");
+const indexer = new RestIndexerProvider(OPERATOR_URL);
 
 console.log("Fetching inputs...");
 const inputs = await indexer

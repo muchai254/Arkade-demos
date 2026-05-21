@@ -235,7 +235,7 @@ if (isNewSwap) {
 }
 
 console.log("Connecting to indexer...");
-const indexer = new RestIndexerProvider("https://mutinynet.arkade.sh");
+const indexer = new RestIndexerProvider(OPERATOR_URL);
 
 console.log("Fetching inputs for contract...");
 const inputs = await indexer

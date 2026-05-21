@@ -1,26 +1,27 @@
+import {
+  ArkAddress,
+  CSVMultisigTapscript,
+  InMemoryContractRepository,
+  InMemoryWalletRepository,
+  MultisigTapscript,
+  RestArkProvider,
+  RestDelegatorProvider,
+  SingleKey,
+  VtxoScript,
+  Wallet,
+} from "@arkade-os/sdk";
 import { HDKey } from "@bitcoinerlab/descriptors-scure";
 import { hex } from "@scure/base";
 import { mnemonicToSeedSync } from "@scure/bip39";
-import { EventSource } from "eventsource";
 
 // Temporary polyfill to enable calling `wallet.getContractManager()`
+import { EventSource } from "eventsource";
 globalThis.EventSource ??= EventSource as never;
 
-const {
-  Wallet,
-  InMemoryWalletRepository,
-  InMemoryContractRepository,
-  RestArkProvider,
-  MultisigTapscript,
-  CSVMultisigTapscript,
-  VtxoScript,
-  SingleKey,
-  RestDelegatorProvider,
-  ArkAddress,
-} = await import("@arkade-os/sdk");
-
 const ALICE_SEED =
-  "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+  "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;
+const OPERATOR_URL = "https://arkade.computer" as const;
+const DELEGATE_URL = "https://delegate.arkade.money" as const;
 
 /** 1. Convert mnemonic phrase into 64 byte seed */
 console.log("Converting mnemonic phrase to seed...");
@@ -28,10 +29,7 @@ const aliceSeed = mnemonicToSeedSync(ALICE_SEED);
 
 /** 2. Derive BIP32 master node from seed */
 console.log("Deriving master node from seed...");
-const masterNode = HDKey.fromMasterSeed(aliceSeed, {
-  public: 76067358, // xpub version bytes
-  private: 76066276, // xpriv version bytes
-});
+const masterNode = HDKey.fromMasterSeed(aliceSeed);
 
 /** 3. Derive BIP32 account node from master
  * - Purpose: Taproot (BIP86), hardened (indicated by the apostrophe)
@@ -49,12 +47,11 @@ console.log("Extracted user public key:", [hex.encode(userPubkey)]);
 
 /** 5. Fetch Arkade operator info */
 console.log("Connecting to Arkade operator...");
-const providerInfo = await new RestArkProvider(
-  "https://arkade.computer",
-).getInfo();
+const operator = new RestArkProvider(OPERATOR_URL);
+const operatorInfo = await operator.getInfo();
 
 /** 6. Extract operator public key */
-const operatorPubkey = hex.decode(providerInfo.signerPubkey).slice(1);
+const operatorPubkey = hex.decode(operatorInfo.signerPubkey).slice(1);
 console.log("Extracted operator public key:", [hex.encode(operatorPubkey)]);
 
 /** 7. Generate default tapscript */
@@ -67,7 +64,7 @@ const defaultPaths = [
   // unilateral exit with timelock
   CSVMultisigTapscript.encode({
     timelock: {
-      value: providerInfo.unilateralExitDelay,
+      value: operatorInfo.unilateralExitDelay,
       type: "seconds",
     },
     pubkeys: [userPubkey],
@@ -85,10 +82,8 @@ console.log("Generated default Arkade address:", [defaultAddress]);
 
 /** 9. Fetch delegate info */
 console.log("Connecting to delegate...");
-const delegateProvider = new RestDelegatorProvider(
-  "https://delegate.arkade.money",
-);
-const delegateInfo = await delegateProvider.getDelegateInfo();
+const delegate = new RestDelegatorProvider(DELEGATE_URL);
+const delegateInfo = await delegate.getDelegateInfo();
 
 /** 10. Extract delegate public key */
 const delegatePubkey = hex.decode(delegateInfo.pubkey).slice(1);
@@ -113,8 +108,8 @@ console.log("Generated delegated Arkade address:", [delegatedAddress]);
 /** 13. Validate against Arkade SDK helper */
 const wallet = await Wallet.create({
   identity: SingleKey.fromPrivateKey(accountNode.privateKey!),
-  arkServerUrl: "https://arkade.computer",
-  delegatorProvider: delegateProvider,
+  arkProvider: operator,
+  delegatorProvider: delegate,
   settlementConfig: false, // Don't auto-renew VTXOs
   storage: {
     // node doesn't have indexedDB, so we have to specify in-memory repos here

@@ -5,7 +5,7 @@ import { mnemonicToSeedSync } from "@scure/bip39";
 import { NETWORK, p2tr } from "@scure/btc-signer";
 
 const ALICE_SEED =
-  "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+  "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;
 
 /** 1. Convert mnemonic phrase into 64 byte seed */
 console.log("Converting mnemonic phrase to seed...");
@@ -13,10 +13,7 @@ const aliceSeed = mnemonicToSeedSync(ALICE_SEED);
 
 /** 2. Derive BIP32 master node from seed */
 console.log("Deriving master node from seed...");
-const masterNode = HDKey.fromMasterSeed(aliceSeed, {
-  public: 76067358, // xpub version bytes
-  private: 76066276, // xpriv version bytes
-});
+const masterNode = HDKey.fromMasterSeed(aliceSeed);
 
 /** 3. Derive BIP32 account node from master
  * - Purpose: Taproot (BIP86), hardened (indicated by the apostrophe)

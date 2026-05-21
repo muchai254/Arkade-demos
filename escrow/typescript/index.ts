@@ -13,18 +13,20 @@ import {
 } from "@arkade-os/sdk";
 import { base64, hex } from "@scure/base";
 
+const OPERATOR_URL = "https://arkade.computer" as const;
+
 // Can co-sign a payout/refund with either player, or sweep after a timeout
 const ARBITER_SEED =
-  "legal winner thank year wave sausage worth useful legal winner thank yellow";
+  "legal winner thank year wave sausage worth useful legal winner thank yellow" as const;
 const ARBITER_PATHS = [0, 1, 2];
 
 // Can co-sign a payout/refund with the arbiter, or collaborate with player B to exit (with or without server)
 const ALICE_SEED =
-  "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+  "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;
 const ALICE_PATHS = [0, 3, 4];
 
 // Can co-sign a payout/refund with the arbiter, or collaborate with player A to exit (with or without server)
-const BOB_SEED = "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo wrong";
+const BOB_SEED = "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo wrong" as const;
 const BOB_PATHS = [1, 3, 4];
 
 // Helper for generating escrow script
@@ -65,7 +67,7 @@ const generateEscrowScript = async (
     CSVMultisigTapscript.encode({
       pubkeys: [playerA, playerB],
       timelock: {
-        value: providerInfo.unilateralExitDelay,
+        value: operatorInfo.unilateralExitDelay,
         type: "seconds",
       },
     }).script,
@@ -84,12 +86,12 @@ const generateEscrowScript = async (
 };
 
 console.log("Connecting to operator...");
-const arkProvider = new RestArkProvider("https://arkade.computer");
-const providerInfo = await arkProvider.getInfo();
+const operator = new RestArkProvider(OPERATOR_URL);
+const operatorInfo = await operator.getInfo();
 
 console.log("Setting up operator identity...");
 const operatorIdentity = ReadonlySingleKey.fromPublicKey(
-  hex.decode(providerInfo.signerPubkey),
+  hex.decode(operatorInfo.signerPubkey),
 );
 const operatorPubkey = await operatorIdentity.xOnlyPublicKey();
 
@@ -118,7 +120,7 @@ console.log("Generated address:", address);
 console.log("Expiry (absolute timelock):", expiry);
 
 console.log("Connecting to indexer...");
-const indexerProvider = new RestIndexerProvider("https://arkade.computer");
+const indexerProvider = new RestIndexerProvider(OPERATOR_URL);
 
 console.log("Checking spendable balance in escrow address...");
 const vtxos = (
@@ -170,7 +172,7 @@ if (balance > 0) {
       },
     ],
     // Unroll script (mandatory)
-    CSVMultisigTapscript.decode(hex.decode(providerInfo.checkpointTapscript)),
+    CSVMultisigTapscript.decode(hex.decode(operatorInfo.checkpointTapscript)),
   );
 
   console.log("Generated Arkade transaction:", [base64.encode(tx.toPSBT())]);
@@ -197,7 +199,7 @@ if (balance > 0) {
   console.log(
     "Submitting Arkade transaction with unsigned checkpoint transactions to operator...",
   );
-  const { arkTxid: txid, signedCheckpointTxs } = await arkProvider.submitTx(
+  const { arkTxid: txid, signedCheckpointTxs } = await operator.submitTx(
     base64.encode(signedTx.toPSBT()),
     checkpointTxs.map((checkpointTx) => base64.encode(checkpointTx.toPSBT())),
   );
@@ -229,7 +231,7 @@ if (balance > 0) {
   console.log("Finalized checkpoint transactions:", finalizedCheckpointTxs);
 
   console.log("Finalizing transaction...");
-  await arkProvider.finalizeTx(txid, finalizedCheckpointTxs);
+  await operator.finalizeTx(txid, finalizedCheckpointTxs);
 
   console.log("Broadcasted!", `https://arkade.space/tx/${txid}`);
 }

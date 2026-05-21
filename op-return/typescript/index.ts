@@ -14,16 +14,17 @@ import {
 import { base64, hex, utf8 } from "@scure/base";
 import { OutScript, Script } from "@scure/btc-signer";
 
+const OPERATOR_URL = "https://arkade.computer" as const;
 const ALICE_SEED =
-  "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+  "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;
 
 console.log("Connecting to operator...");
-const arkProvider = new RestArkProvider("https://arkade.computer");
-const providerInfo = await arkProvider.getInfo();
+const operator = new RestArkProvider(OPERATOR_URL);
+const operatorInfo = await operator.getInfo();
 
 console.log("Setting up operator identity...");
 const operatorIdentity = ReadonlySingleKey.fromPublicKey(
-  hex.decode(providerInfo.signerPubkey),
+  hex.decode(operatorInfo.signerPubkey),
 );
 const operatorPubkey = await operatorIdentity.xOnlyPublicKey();
 
@@ -42,7 +43,7 @@ console.log(
 );
 
 console.log("Connecting to indexer...");
-const indexerProvider = new RestIndexerProvider("https://arkade.computer");
+const indexerProvider = new RestIndexerProvider(OPERATOR_URL);
 
 console.log("Checking spendable balance in address...");
 const vtxos = (
@@ -86,7 +87,7 @@ if (balance > 0n) {
       },
     ],
     // Unroll script (mandatory)
-    CSVMultisigTapscript.decode(hex.decode(providerInfo.checkpointTapscript)),
+    CSVMultisigTapscript.decode(hex.decode(operatorInfo.checkpointTapscript)),
   );
 
   console.log("Generated Arkade transaction:", [base64.encode(tx.toPSBT())]);
@@ -103,7 +104,7 @@ if (balance > 0n) {
   console.log(
     "Submitting Arkade transaction with unsigned checkpoint transactions to operator...",
   );
-  const { arkTxid: txid, signedCheckpointTxs } = await arkProvider.submitTx(
+  const { arkTxid: txid, signedCheckpointTxs } = await operator.submitTx(
     base64.encode(signedTx.toPSBT()),
     checkpointTxs.map((checkpointTx) => base64.encode(checkpointTx.toPSBT())),
   );
@@ -123,7 +124,7 @@ if (balance > 0n) {
   console.log("Finalized checkpoint transactions:", finalizedCheckpointTxs);
 
   console.log("Finalizing transaction...");
-  await arkProvider.finalizeTx(txid, finalizedCheckpointTxs);
+  await operator.finalizeTx(txid, finalizedCheckpointTxs);
 
   console.log("Broadcasted!", `https://arkade.space/tx/${txid}`);
 
@@ -138,7 +139,7 @@ if (balance > 0n) {
     const tx = Transaction.fromPSBT(base64.decode(txs[0]));
     for (let vout = 0; vout < tx.outputsLength; vout++) {
       const output = tx.getOutput(vout);
-      const amount = output.amount ?? 0n;
+      const amount = output.amount || 0n;
       const outScript = output.script && OutScript.decode(output.script);
       if (outScript?.type === "p2a") {
         console.log(

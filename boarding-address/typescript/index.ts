@@ -14,7 +14,8 @@ import { mnemonicToSeedSync } from "@scure/bip39";
 import { NETWORK } from "@scure/btc-signer";
 
 const ALICE_SEED =
-  "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+  "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;
+const OPERATOR_URL = "https://arkade.computer" as const;
 
 /** 1. Convert mnemonic phrase into 64 byte seed */
 console.log("Converting mnemonic phrase to seed...");
@@ -22,10 +23,7 @@ const aliceSeed = mnemonicToSeedSync(ALICE_SEED);
 
 /** 2. Derive BIP32 master node from seed */
 console.log("Deriving master node from seed...");
-const masterNode = HDKey.fromMasterSeed(aliceSeed, {
-  public: 76067358, // xpub version bytes
-  private: 76066276, // xpriv version bytes
-});
+const masterNode = HDKey.fromMasterSeed(aliceSeed);
 
 /** 3. Derive BIP32 account node from master
  * - Purpose: Taproot (BIP86), hardened (indicated by the apostrophe)
@@ -43,12 +41,11 @@ console.log("Extracted user public key:", [hex.encode(userPubkey)]);
 
 /** 5. Fetch Arkade operator info */
 console.log("Connecting to Arkade operator...");
-const providerInfo = await new RestArkProvider(
-  "https://arkade.computer",
-).getInfo();
+const operator = new RestArkProvider(OPERATOR_URL);
+const operatorInfo = await operator.getInfo();
 
 /** 6. Extract operator public key */
-const operatorPubkey = hex.decode(providerInfo.signerPubkey).slice(1);
+const operatorPubkey = hex.decode(operatorInfo.signerPubkey).slice(1);
 console.log("Extracted operator public key:", [hex.encode(operatorPubkey)]);
 
 /** 7. Generate boarding tapscript */
@@ -61,7 +58,7 @@ const boardingTapscript = new VtxoScript([
   // unilateral exit with timelock
   CSVMultisigTapscript.encode({
     timelock: {
-      value: providerInfo.boardingExitDelay,
+      value: operatorInfo.boardingExitDelay,
       type: "seconds",
     },
     pubkeys: [userPubkey],
@@ -78,7 +75,7 @@ console.log("Generated Arkade boarding address:", [address]);
 /** 9. Validate against Arkade SDK helper */
 const wallet = await Wallet.create({
   identity: SingleKey.fromPrivateKey(accountNode.privateKey!),
-  arkServerUrl: "https://arkade.computer",
+  arkProvider: operator,
   settlementConfig: false, // Don't auto-renew VTXOs
   storage: {
     // node doesn't have indexedDB, so we have to specify in-memory repos here
