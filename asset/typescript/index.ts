@@ -25,8 +25,8 @@ const metadata: AssetMetadata = {
 };
 
 // specify test amounts
-const issueAmount = 100_000_000; // 100.000000 adjusted for 6 decimals
-const reissueAmount = 123_456; //   0.123456 adjusted for 6 decimals
+const issueAmount = 100_000_000n; // 100.000000 adjusted for 6 decimals
+const reissueAmount = 123_456n; //   0.123456 adjusted for 6 decimals
 
 // helper for creating human-readable balances
 const summarizeBalances = async (balance: WalletBalance) => {
@@ -40,7 +40,7 @@ const summarizeBalances = async (balance: WalletBalance) => {
         }
         const { decimals, ticker } = details.metadata ?? {};
         const safeDecimals = decimals || 0;
-        return `${(amount / 10 ** safeDecimals).toFixed(safeDecimals)} ${ticker || truncatedAssetId}`;
+        return `${Number(amount / 10n ** BigInt(safeDecimals)).toFixed(safeDecimals)} ${ticker || truncatedAssetId}`;
       }),
     ),
   );
@@ -85,7 +85,7 @@ console.log("\nFetched updated balances:", await summarizeBalances(balance));
 // create new control asset
 const { arkTxId: controlIssueTxId, assetId: controlAssetId } =
   await wallet.assetManager.issue({
-    amount: 1,
+    amount: 1n,
     metadata: {
       ticker: `ctrl-${metadata.ticker}`,
       icon: "https://i.imgur.com/wWvxudd.png",
