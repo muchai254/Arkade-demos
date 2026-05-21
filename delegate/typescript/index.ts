@@ -97,9 +97,11 @@ const inputs = await indexer
     vtxos
       /** Filter out inputs with Arkade assets */
       .filter((input) => !input.assets?.length)
-      /** Filter only preconfirmed + swept inputs */
+      /** Filter only delegatable inputs */
       .filter((input) =>
-        ["preconfirmed", "swept"].includes(input.virtualStatus.state),
+        ["settled", "preconfirmed", "swept"].includes(
+          input.virtualStatus.state,
+        ),
       )
       /** Add fields to allow input to be spent */
       .map((input) => ({
