@@ -95,9 +95,13 @@ const inputs = await indexer
   })
   .then(({ vtxos }) =>
     vtxos
-      /** Filter out VTXOs with Arkade assets */
+      /** Filter out inputs with Arkade assets */
       .filter((input) => !input.assets?.length)
-      /** Add fields to allow VTXO to be spent */
+      /** Filter only preconfirmed + swept inputs */
+      .filter((input) =>
+        ["preconfirmed", "swept"].includes(input.virtualStatus.state),
+      )
+      /** Add fields to allow input to be spent */
       .map((input) => ({
         ...input,
         forfeitTapLeafScript: userScript.forfeit(),
@@ -107,8 +111,8 @@ const inputs = await indexer
   );
 const inputTotal = inputs.reduce((sum, input) => sum + BigInt(input.value), 0n);
 console.log(
-  `Fetched ${inputs.length} inputs totalling ${inputTotal}:`,
-  inputs.map((input) => `${input.txid}:${input.vout} -> ${input.value}`),
+  `Fetched ${inputs.length} inputs:`,
+  inputs.map((input) => [`${input.txid}:${input.vout}`, input.value]),
 );
 
 if (inputTotal >= 0n) {
@@ -118,16 +122,18 @@ if (inputTotal >= 0n) {
       amount: inputTotal - delegateFee,
     },
   ];
-  console.log(`Added change output of ${inputTotal - delegateFee} to self:`, [
+  console.log(`Added change output:`, [
     userAddress.encode(),
+    outputs[0].amount,
   ]);
   if (delegateFee >= 0n) {
     outputs.push({
       script: delegateAddress.pkScript,
       amount: delegateFee,
     });
-    console.log(`Added fee output of ${delegateFee} to delegate`, [
+    console.log(`Added delegate fee output:`, [
       delegateAddress.encode(),
+      delegateFee,
     ]);
   }
 
@@ -154,18 +160,16 @@ if (inputTotal >= 0n) {
         const tx = new Transaction({
           version: 3,
         });
-        for (const input of inputs) {
-          tx.addInput({
-            txid: input.txid,
-            index: input.vout,
-            witnessUtxo: {
-              amount: BigInt(input.value),
-              script: userAddress.pkScript,
-            },
-            sighashType: SigHash.ALL_ANYONECANPAY,
-            tapLeafScript: [delegateTapLeaf],
-          });
-        }
+        tx.addInput({
+          txid: input.txid,
+          index: input.vout,
+          witnessUtxo: {
+            amount: BigInt(input.value),
+            script: userAddress.pkScript,
+          },
+          sighashType: SigHash.ALL_ANYONECANPAY,
+          tapLeafScript: [delegateTapLeaf],
+        });
         tx.addOutput({
           script: forfeitOutscript,
           amount: BigInt(input.value) + DUST,
