@@ -164,10 +164,13 @@ const swap = await ky
     /** Arkade lockup address to send funds to. */
     address: string;
   }>();
-console.log("Created submarine swap:", swap);
 
 const swapAddress = ArkAddress.decode(swap.address);
 const swapAmount = BigInt(swap.expectedAmount);
+console.log("Created submarine swap:", {
+  expectedAmount: swapAmount,
+  address: swapAddress.encode(),
+});
 
 if (inputTotal < swapAmount) {
   throw new Error(`Address does not have enough for swap.
