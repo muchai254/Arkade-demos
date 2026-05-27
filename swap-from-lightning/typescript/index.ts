@@ -167,6 +167,7 @@ const swap = await ky
     invoice: string;
   }>();
 
+/** In a production scenario, all of the following should be saved from the original swap response. */
 const refundPubkey = await ReadonlySingleKey.fromPublicKey(
   hex.decode(swap.refundPublicKey),
 ).xOnlyPublicKey();
