@@ -7,8 +7,10 @@
   },
   "dependencies": {
     "@arkade-os/sdk": "^0.4.28",
+    "@noble/hashes": "^2.2.0",
     "@scure/base": "^2.2.0",
     "@scure/btc-signer": "^2.2.0",
-    "ky": "^2.0.2"
+    "ky": "^2.0.2",
+    "light-bolt11-decoder": "^3.2.0"
   }
 }

@@ -1,5 +1,4 @@
 import {
-  ArkAddress,
   buildOffchainTx,
   CSVMultisigTapscript,
   DelegateVtxo,
@@ -10,10 +9,13 @@ import {
   RestDelegatorProvider,
   RestIndexerProvider,
   Transaction,
+  VHTLC,
 } from "@arkade-os/sdk";
+import { ripemd160 } from "@noble/hashes/legacy.js";
 import { base64, hex } from "@scure/base";
 import { Script } from "@scure/btc-signer";
 import ky from "ky";
+import bolt11 from "light-bolt11-decoder";
 
 const INVOICE_AMOUNT = 1_000n as const;
 const LN_ADDRESS = "refund@lnurl.mutinynet.com" as const;
@@ -106,7 +108,7 @@ const lud16Callback = await ky
 console.log("Fetched LUD-16 callback:", lud16Callback);
 
 console.log("Fetching BOLT-11 invoice...");
-const invoice = await ky
+const _invoice = await ky
   .get(lud16Callback, {
     searchParams: {
       amount: (INVOICE_AMOUNT * 1000n).toString(),
@@ -116,7 +118,29 @@ const invoice = await ky
     pr: string;
   }>()
   .then(({ pr }) => pr);
-console.log("Fetched BOLT-11 invoice", [invoice]);
+console.log("Fetched BOLT-11 invoice", [_invoice]);
+
+console.log("Decoding BOLT-11 invoice...");
+const decoded = bolt11.decode(_invoice);
+const invoice = {
+  paymentRequest: decoded.paymentRequest,
+  expiry: BigInt(decoded.expiry) ?? 3600n,
+  amountSats: BigInt(
+    Math.floor(
+      Number(decoded.sections.find((s) => s.name === "amount")?.value ?? "0"),
+    ) / 1000,
+  ),
+  description:
+    decoded.sections.find((s) => s.name === "description")?.value ?? "",
+  paymentHash:
+    decoded.sections.find((s) => s.name === "payment_hash")?.value ?? "",
+};
+if (invoice.amountSats !== INVOICE_AMOUNT) {
+  throw new Error(
+    `Decoded invoice amount (${invoice.amountSats}) does not match expected amount (${INVOICE_AMOUNT})`,
+  );
+}
+console.log("Decoded BOLT-11 invoice:", invoice);
 
 console.log("Fetching submarine swap limits...");
 const limits = await ky
@@ -154,7 +178,7 @@ const swap = await ky
     json: {
       from: "ARK",
       to: "BTC",
-      invoice,
+      invoice: invoice.paymentRequest,
       refundPublicKey: hex.encode(userPubkeyCompressed),
     },
   })
@@ -163,27 +187,78 @@ const swap = await ky
     expectedAmount: number;
     /** Arkade lockup address to send funds to. */
     address: string;
+    /** Boltz's public key for the claim path. */
+    claimPublicKey: string;
+    /** Block heights for various timeout/refund scenarios. */
+    timeoutBlockHeights: {
+      refund: number;
+      unilateralClaim: number;
+      unilateralRefund: number;
+      unilateralRefundWithoutReceiver: number;
+    };
   }>();
 
-const swapAddress = ArkAddress.decode(swap.address);
-const swapAmount = BigInt(swap.expectedAmount);
-console.log("Created submarine swap:", {
-  expectedAmount: swapAmount,
-  address: swapAddress.encode(),
+const lockupAmount = BigInt(swap.expectedAmount);
+const claimPubkey = await ReadonlySingleKey.fromPublicKey(
+  hex.decode(swap.claimPublicKey),
+).xOnlyPublicKey();
+const refundLocktime = BigInt(swap.timeoutBlockHeights.refund);
+const unilateralClaimDelay = {
+  value: BigInt(swap.timeoutBlockHeights.unilateralClaim),
+  type: "seconds",
+} as const;
+const unilateralRefundDelay = {
+  value: BigInt(swap.timeoutBlockHeights.unilateralRefund),
+  type: "seconds",
+} as const;
+const unilateralRefundWithoutReceiverDelay = {
+  value: BigInt(swap.timeoutBlockHeights.unilateralRefundWithoutReceiver),
+  type: "seconds",
+} as const;
+
+/** Reconstruct lockup address */
+console.log("Validating lockup address...");
+const lockupScript = new VHTLC.Script({
+  preimageHash: ripemd160(hex.decode(invoice.paymentHash)),
+  sender: userPubkey,
+  receiver: claimPubkey,
+  server: operatorPubkey,
+  refundLocktime,
+  unilateralClaimDelay,
+  unilateralRefundDelay,
+  unilateralRefundWithoutReceiverDelay,
+});
+const lockupAddress = lockupScript.address(NETWORK.hrp, operatorPubkey);
+
+/** Ensure lockup address matches */
+if (lockupAddress.encode() !== swap.address) {
+  throw new Error("Derived lockup address does NOT match API response", {
+    cause: {
+      expected: lockupAddress.encode(),
+      received: swap.address,
+    },
+  });
+}
+console.log("Validated lockup address:", lockupAddress.encode());
+
+console.log(`Created submarine swap:`, {
+  lockupAddress: lockupAddress.encode(),
+  lockupAmount,
+  refundLocktime,
 });
 
-if (inputTotal < swapAmount) {
+if (inputTotal < lockupAmount) {
   throw new Error(`Address does not have enough for swap.
 
 Need:
-- ${swapAmount - inputTotal}
+- ${lockupAmount - inputTotal}
 
 Address:
 - ${userAddress.encode()}
 `);
 }
 
-const changeAmount = inputTotal - swapAmount;
+const changeAmount = inputTotal - lockupAmount;
 const changeOutput =
   changeAmount < DUST
     ? {
@@ -207,8 +282,8 @@ const { arkTx: tx, checkpoints: checkpointTxs } = buildOffchainTx(
   })),
   [
     {
-      script: swapAddress.pkScript,
-      amount: swapAmount,
+      script: lockupAddress.pkScript,
+      amount: lockupAmount,
     },
     changeOutput,
   ],

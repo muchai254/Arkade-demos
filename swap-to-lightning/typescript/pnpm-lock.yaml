@@ -11,6 +11,9 @@ importers:
       '@arkade-os/sdk':
         specifier: ^0.4.28
         version: 0.4.28
+      '@noble/hashes':
+        specifier: ^2.2.0
+        version: 2.2.0
       '@scure/base':
         specifier: ^2.2.0
         version: 2.2.0
@@ -20,6 +23,9 @@ importers:
       ky:
         specifier: ^2.0.2
         version: 2.0.2
+      light-bolt11-decoder:
+        specifier: ^3.2.0
+        version: 3.2.0
 
 packages:
 
@@ -113,6 +119,9 @@ packages:
   '@noble/secp256k1@3.0.0':
     resolution: {integrity: sha512-NJBaR352KyIvj3t6sgT/+7xrNyF9Xk9QlLSIqUGVUYlsnDTAUqY8LOmwpcgEx4AMJXRITQ5XEVHD+mMaPfr3mg==}
 
+  '@scure/base@1.1.1':
+    resolution: {integrity: sha512-ZxOhsSyxYwLJj3pLZCefNitxsj093tb2vq90mp2txoYeBqbcjDjqFhyM8eUjq/uFm6zJ+mUuqxlS2FkuSY1MTA==}
+
   '@scure/base@2.0.0':
     resolution: {integrity: sha512-3E1kpuZginKkek01ovG8krQ0Z44E3DHPjc5S2rjJw9lZn3KSQOs8S7wqikF/AH7iRanHypj85uGyxk0XAyC37w==}
 
@@ -143,6 +152,9 @@ packages:
   ky@2.0.2:
     resolution: {integrity: sha512-/GmXpo9F9W+f8n4Ivr2iH+7h7wL7jLbLKWkMlpflcCRb6kGjBfTlASEXaZ9qUgNTn4VgS0P2pwxxzQ4EM6Ulgg==}
     engines: {node: '>=22'}
+
+  light-bolt11-decoder@3.2.0:
+    resolution: {integrity: sha512-3QEofgiBOP4Ehs9BI+RkZdXZNtSys0nsJ6fyGeSiAGCBsMwHGUDS/JQlY/sTnWs91A2Nh0S9XXfA8Sy9g6QpuQ==}
 
   lodash.memoize@4.1.2:
     resolution: {integrity: sha512-t7j+NzmgnQzTAYXcsHYLgimltOV1MXHtlOWf6GjL9Kj8GK5FInw5JotxvbOs+IvV1/Dzo04/fCGfLVs7aXb4Ag==}
@@ -249,6 +261,8 @@ snapshots:
 
   '@noble/secp256k1@3.0.0': {}
 
+  '@scure/base@1.1.1': {}
+
   '@scure/base@2.0.0': {}
 
   '@scure/base@2.2.0': {}
@@ -285,6 +299,10 @@ snapshots:
       ws: 8.21.0
 
   ky@2.0.2: {}
+
+  light-bolt11-decoder@3.2.0:
+    dependencies:
+      '@scure/base': 1.1.1
 
   lodash.memoize@4.1.2: {}
 
