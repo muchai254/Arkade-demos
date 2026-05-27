@@ -282,7 +282,7 @@ if (isNewSwap) {
   console.log(`Fetched reverse swap:`, {
     preimage: hex.encode(preimage),
     claimAddress: claimAddress.encode(),
-    refundLocktime: refundLocktime,
+    refundLocktime,
   });
 }
 
