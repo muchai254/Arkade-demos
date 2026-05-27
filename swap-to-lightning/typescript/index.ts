@@ -252,12 +252,11 @@ if (lockupAddress.encode() !== swap.address) {
     },
   });
 }
-console.log("Validated lockup address:", lockupAddress.encode());
+console.log("Validated lockup address:", [lockupAddress.encode()]);
 
 console.log(`Created submarine swap:`, {
-  lockupAddress: lockupAddress.encode(),
   lockupAmount,
-  refundLocktime,
+  lockupAddress: lockupAddress.encode(),
 });
 
 if (inputTotal < lockupAmount) {
