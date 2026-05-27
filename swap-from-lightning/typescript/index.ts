@@ -18,6 +18,7 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { randomBytes } from "@noble/hashes/utils.js";
 import { base64, hex } from "@scure/base";
 import ky from "ky";
+import bolt11 from "light-bolt11-decoder";
 
 const PREIMAGE = "" as const;
 const REFUND_LOCKTIME = 0n as const;
@@ -40,6 +41,11 @@ if (
 ) {
   throw new Error(
     "REFUND_LOCKTIME must be set to a valid future timestamp if PREIMAGE is defined",
+    {
+      cause: {
+        REFUND_LOCKTIME,
+      },
+    },
   );
 }
 
@@ -123,14 +129,20 @@ if (isNewSwap) {
   console.log("Fetched reverse swap limits:", limits);
 
   if (INVOICE_AMOUNT < limits.min) {
-    throw new Error(
-      `Amount (${INVOICE_AMOUNT}) below swap minimum: ${limits.min}`,
-    );
+    throw new Error(`Amount below swap minimum`, {
+      cause: {
+        amount: INVOICE_AMOUNT,
+        minimum: limits.min,
+      },
+    });
   }
   if (INVOICE_AMOUNT > limits.max) {
-    throw new Error(
-      `Amount (${INVOICE_AMOUNT}) above swap maximum: ${limits.max}`,
-    );
+    throw new Error(`Amount above swap maximum`, {
+      cause: {
+        amount: INVOICE_AMOUNT,
+        maximum: limits.max,
+      },
+    });
   }
 }
 
@@ -187,8 +199,9 @@ const unilateralRefundWithoutReceiverDelay = {
   type: "seconds",
 } as const;
 
-/** Reconstruct lockup address */
-const contractScript = new VHTLC.Script({
+/** Reconstruct claim address */
+console.log("Reconstructing claim address...");
+const claimScript = new VHTLC.Script({
   preimageHash: ripemd160(sha256(preimage)),
   sender: refundPubkey,
   receiver: userPubkey,
@@ -198,23 +211,61 @@ const contractScript = new VHTLC.Script({
   unilateralRefundDelay,
   unilateralRefundWithoutReceiverDelay,
 });
-const contractAddress = contractScript.address(NETWORK.hrp, operatorPubkey);
+const claimAddress = claimScript.address(NETWORK.hrp, operatorPubkey);
 
 if (isNewSwap) {
-  /** Ensure contract address matches */
-  if (contractAddress.encode() !== swap.lockupAddress) {
-    throw new Error("Derived lockup address does NOT match API response", {
+  /** Ensure invoice is valid */
+  console.log("Validating BOLT-11 invoice...");
+  const decoded = bolt11.decode(swap.invoice);
+  const invoice = {
+    paymentRequest: decoded.paymentRequest,
+    expiry: BigInt(decoded.expiry) ?? 3600n,
+    amountSats: BigInt(
+      Math.floor(
+        Number(decoded.sections.find((s) => s.name === "amount")?.value ?? "0"),
+      ) / 1000,
+    ),
+    description:
+      decoded.sections.find((s) => s.name === "description")?.value ?? "",
+    paymentHash:
+      decoded.sections.find((s) => s.name === "payment_hash")?.value ?? "",
+  };
+  if (invoice.amountSats !== INVOICE_AMOUNT) {
+    throw new Error(`Decoded invoice amount does NOT match expected amount`, {
       cause: {
-        expected: contractAddress.encode(),
+        expected: INVOICE_AMOUNT,
+        received: invoice.amountSats,
+      },
+    });
+  }
+  if (invoice.paymentHash !== hex.encode(sha256(preimage))) {
+    throw new Error(
+      `Decoded payment hash does NOT match expected preimage hash`,
+      {
+        cause: {
+          expected: hex.encode(sha256(preimage)),
+          received: invoice.paymentHash,
+        },
+      },
+    );
+  }
+  console.log("Decoded BOLT-11 invoice:", invoice);
+  /** Ensure claim address matches */
+  console.log("Validating claim address...");
+  if (claimAddress.encode() !== swap.lockupAddress) {
+    throw new Error("Derived claim address does NOT match API response", {
+      cause: {
+        expected: claimAddress.encode(),
         received: swap.lockupAddress,
       },
     });
   }
+  console.log("Validated claim address:", claimAddress.encode());
   console.log(`Created reverse swap:`, {
     preimage: hex.encode(preimage),
-    invoice: swap.invoice,
+    invoice: invoice.paymentRequest,
     lockupAddress: swap.lockupAddress,
-    refundLocktime: refundLocktime,
+    refundLocktime,
   });
   if (isNewSwap) {
     throw new Error(`
@@ -230,7 +281,7 @@ if (isNewSwap) {
 } else {
   console.log(`Fetched reverse swap:`, {
     preimage: hex.encode(preimage),
-    lockupAddress: contractAddress.encode(),
+    claimAddress: claimAddress.encode(),
     refundLocktime: refundLocktime,
   });
 }
@@ -238,10 +289,10 @@ if (isNewSwap) {
 console.log("Connecting to indexer...");
 const indexer = new RestIndexerProvider(OPERATOR_URL);
 
-console.log("Fetching inputs for contract...");
+console.log("Fetching inputs for claim address...");
 const inputs = await indexer
   .getVtxos({
-    scripts: [hex.encode(contractScript.pkScript)],
+    scripts: [hex.encode(claimScript.pkScript)],
     spendableOnly: true,
   })
   .then(({ vtxos }) =>
@@ -253,11 +304,11 @@ const inputTotal = inputs.reduce((sum, input) => sum + BigInt(input.value), 0n);
 console.log("Contract balance:", [inputTotal]);
 
 if (inputTotal === 0n) {
-  throw new Error(`Lockup address not funded.
-
-Lockup address:
-- ${contractAddress.encode()}
-`);
+  throw new Error(`Claim address not funded`, {
+    cause: {
+      address: claimAddress.encode(),
+    },
+  });
 }
 
 console.log("Generating claim transaction...");
@@ -267,8 +318,8 @@ const { arkTx: tx, checkpoints: checkpointTxs } = buildOffchainTx(
     vout,
     value,
     /** Make input spendable */
-    tapLeafScript: contractScript.claim(),
-    tapTree: contractScript.encode(),
+    tapLeafScript: claimScript.claim(),
+    tapTree: claimScript.encode(),
   })),
   [
     /** Sweep all to self */
