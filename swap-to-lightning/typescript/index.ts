@@ -87,16 +87,20 @@ const inputTotal = inputs.reduce((sum, input) => sum + BigInt(input.value), 0n);
 console.log("User balance:", [inputTotal]);
 
 if (inputTotal === 0n) {
-  throw new Error(`Address not funded.
-
-Address:
-- ${userAddress.encode()}
-`);
+  throw new Error(`Address not funded`, {
+    cause: {
+      address: userAddress.encode(),
+    },
+  });
 }
 
 console.log("Validating LUD-16 address:", [LN_ADDRESS]);
 if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(LN_ADDRESS)) {
-  throw new Error(`Invalid LN_ADDRESS`);
+  throw new Error(`Invalid LN_ADDRESS`, {
+    cause: {
+      LN_ADDRESS,
+    },
+  });
 }
 const [lud16User, lud16Domain] = LN_ADDRESS.split("@");
 
@@ -120,7 +124,7 @@ const _invoice = await ky
   .then(({ pr }) => pr);
 console.log("Fetched BOLT-11 invoice", [_invoice]);
 
-console.log("Decoding BOLT-11 invoice...");
+console.log("Validating BOLT-11 invoice...");
 const decoded = bolt11.decode(_invoice);
 const invoice = {
   paymentRequest: decoded.paymentRequest,
@@ -136,11 +140,14 @@ const invoice = {
     decoded.sections.find((s) => s.name === "payment_hash")?.value ?? "",
 };
 if (invoice.amountSats !== INVOICE_AMOUNT) {
-  throw new Error(
-    `Decoded invoice amount (${invoice.amountSats}) does not match expected amount (${INVOICE_AMOUNT})`,
-  );
+  throw new Error(`Decoded invoice amount does NOT match expected amount`, {
+    cause: {
+      expected: INVOICE_AMOUNT,
+      received: invoice.amountSats,
+    },
+  });
 }
-console.log("Decoded BOLT-11 invoice:", invoice);
+console.log("Validated BOLT-11 invoice:", invoice);
 
 console.log("Fetching submarine swap limits...");
 const limits = await ky
@@ -162,14 +169,20 @@ const limits = await ky
 console.log("Fetched submarine swap limits:", limits);
 
 if (INVOICE_AMOUNT < limits.min) {
-  throw new Error(
-    `Amount (${INVOICE_AMOUNT}) below swap minimum: ${limits.min}`,
-  );
+  throw new Error(`Amount below swap minimum`, {
+    cause: {
+      amount: INVOICE_AMOUNT,
+      minimum: limits.min,
+    },
+  });
 }
 if (INVOICE_AMOUNT > limits.max) {
-  throw new Error(
-    `Amount (${INVOICE_AMOUNT}) above swap maximum: ${limits.max}`,
-  );
+  throw new Error(`Amount above swap maximum`, {
+    cause: {
+      amount: INVOICE_AMOUNT,
+      maximum: limits.max,
+    },
+  });
 }
 
 console.log("Creating submarine swap...");
@@ -217,7 +230,7 @@ const unilateralRefundWithoutReceiverDelay = {
 } as const;
 
 /** Reconstruct lockup address */
-console.log("Validating lockup address...");
+console.log("Reconstructing lockup address...");
 const lockupScript = new VHTLC.Script({
   preimageHash: ripemd160(hex.decode(invoice.paymentHash)),
   sender: userPubkey,
@@ -248,14 +261,14 @@ console.log(`Created submarine swap:`, {
 });
 
 if (inputTotal < lockupAmount) {
-  throw new Error(`Address does not have enough for swap.
-
-Need:
-- ${lockupAmount - inputTotal}
-
-Address:
-- ${userAddress.encode()}
-`);
+  throw new Error(`Address does not have enough for swap`, {
+    cause: {
+      inputTotal,
+      lockupAmount,
+      need: lockupAmount - inputTotal,
+      address: userAddress.encode(),
+    },
+  });
 }
 
 const changeAmount = inputTotal - lockupAmount;
