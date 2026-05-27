@@ -164,6 +164,8 @@ const swap = await ky
     },
   })
   .json<{
+    /** Amount to be received on Arkade. */
+    onchainAmount: number;
     /** Arkade lockup address where Boltz will lock funds. */
     lockupAddress: string;
     /** Boltz's public key for the refund path. */
@@ -198,6 +200,7 @@ const unilateralRefundWithoutReceiverDelay = {
   value: BigInt(swap.timeoutBlockHeights.unilateralRefundWithoutReceiver),
   type: "seconds",
 } as const;
+const expectedClaimAmount = BigInt(swap.onchainAmount);
 
 /** Reconstruct claim address */
 console.log("Reconstructing claim address...");
@@ -260,29 +263,31 @@ if (isNewSwap) {
       },
     });
   }
-  console.log("Validated claim address:", claimAddress.encode());
-  console.log(`Created reverse swap:`, {
-    preimage: hex.encode(preimage),
-    invoice: invoice.paymentRequest,
-    lockupAddress: swap.lockupAddress,
-    refundLocktime,
-  });
+  console.log("Validated claim address:", [claimAddress.encode()]);
   if (isNewSwap) {
-    throw new Error(`
+    throw new Error(
+      `
 🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
 🚨          PREIMAGE and REFUND_LOCKTIME are not defined!           🚨
 🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
-🚨                         Please set to:                           🚨
-🚨 ${hex.encode(preimage)} 🚨
-🚨                           ${refundLocktime}                             🚨
-🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
-`);
+`,
+      {
+        cause: {
+          invoiceAmount: invoice.amountSats,
+          invoice: invoice.paymentRequest,
+          expectedClaimAmount,
+          claimAddress: claimAddress.encode(),
+          PREIMAGE: hex.encode(preimage),
+          REFUND_LOCKTIME: refundLocktime,
+        },
+      },
+    );
   }
 } else {
   console.log(`Fetched reverse swap:`, {
-    preimage: hex.encode(preimage),
+    invoiceAmount: INVOICE_AMOUNT,
+    expectedClaimAmount,
     claimAddress: claimAddress.encode(),
-    refundLocktime,
   });
 }
 
