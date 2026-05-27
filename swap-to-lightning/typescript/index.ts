@@ -212,7 +212,7 @@ const swap = await ky
   }>();
 
 const lockupAmount = BigInt(swap.expectedAmount);
-const claimPubkey = await ReadonlySingleKey.fromPublicKey(
+const boltzPubkey = await ReadonlySingleKey.fromPublicKey(
   hex.decode(swap.claimPublicKey),
 ).xOnlyPublicKey();
 const refundLocktime = BigInt(swap.timeoutBlockHeights.refund);
@@ -234,7 +234,7 @@ console.log("Reconstructing lockup address...");
 const lockupScript = new VHTLC.Script({
   preimageHash: ripemd160(hex.decode(invoice.paymentHash)),
   sender: userPubkey,
-  receiver: claimPubkey,
+  receiver: boltzPubkey,
   server: operatorPubkey,
   refundLocktime,
   unilateralClaimDelay,

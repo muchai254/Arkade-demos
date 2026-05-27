@@ -180,7 +180,7 @@ const swap = await ky
   }>();
 
 /** In a production scenario, all of the following should be saved from the original swap response. */
-const refundPubkey = await ReadonlySingleKey.fromPublicKey(
+const boltzPubkey = await ReadonlySingleKey.fromPublicKey(
   hex.decode(swap.refundPublicKey),
 ).xOnlyPublicKey();
 const refundLocktime = isNewSwap
@@ -203,7 +203,7 @@ const unilateralRefundWithoutReceiverDelay = {
 console.log("Reconstructing claim address...");
 const claimScript = new VHTLC.Script({
   preimageHash: ripemd160(sha256(preimage)),
-  sender: refundPubkey,
+  sender: boltzPubkey,
   receiver: userPubkey,
   server: operatorPubkey,
   refundLocktime,
