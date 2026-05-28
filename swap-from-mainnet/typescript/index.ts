@@ -34,7 +34,7 @@ const NETWORK = networks.mutinynet;
 const OPERATOR_URL = "https://mutinynet.arkade.sh" as const;
 const DELEGATE_URL = "https://delegator.mutinynet.arkade.sh" as const;
 const BOLTZ_API = "https://api.boltz.mutinynet.arkade.sh" as const;
-const MEMPOOL_API = "https://mutinynet.com/api" as const;
+const MEMPOOL_API = "https://mempool.mutinynet.arkade.sh/api" as const;
 
 const isNewSwap = hex.decode(PREIMAGE).length !== 32;
 const preimage = isNewSwap ? randomBytes(32) : hex.decode(PREIMAGE);
@@ -189,11 +189,11 @@ if (isNewSwap) {
   const recommendedFeeRate = await ky
     .get(`${MEMPOOL_API}/v1/fees/recommended`)
     .json<{
-  fastestFee: number
+      fastestFee: number;
     }>()
-    .then(({fastestFee}) => BigInt(fastestFee));
+    .then(({ fastestFee }) => BigInt(fastestFee));
   console.log("Fetched recommended fee rate:", [recommendedFeeRate]);
-  feeRate = recommendedFeeRate
+  feeRate = recommendedFeeRate;
 }
 
 console.log(
@@ -262,30 +262,30 @@ if (BigInt(swap.claimDetails.amount) !== SWAP_AMOUNT) {
 }
 
 /** In a production scenario, all of the following should be saved from the original swap response. */
-const refundPubkey = await ReadonlySingleKey.fromPublicKey(
+const arkadeBoltzPubkey = await ReadonlySingleKey.fromPublicKey(
   hex.decode(swap.claimDetails.serverPublicKey),
 ).xOnlyPublicKey();
-const refundLocktime = isNewSwap
+const arkadeRefundLocktime = isNewSwap
   ? BigInt(swap.claimDetails.timeouts.refund)
   : BigInt(REFUND_LOCKTIME);
-const unilateralClaimDelay = {
+const arkadeUnilateralClaimDelay = {
   value: BigInt(swap.claimDetails.timeouts.unilateralClaim),
   type: "seconds",
 } as const;
-const unilateralRefundDelay = {
+const arkadeUnilateralRefundDelay = {
   value: BigInt(swap.claimDetails.timeouts.unilateralRefund),
   type: "seconds",
 } as const;
-const unilateralRefundWithoutReceiverDelay = {
+const arkadeUnilateralRefundWithoutReceiverDelay = {
   value: BigInt(swap.claimDetails.timeouts.unilateralRefundWithoutReceiver),
   type: "seconds",
 } as const;
-const lockupPubkeyCompressed = await ReadonlySingleKey.fromPublicKey(
+const mainnetBoltzPubkeyCompressed = await ReadonlySingleKey.fromPublicKey(
   hex.decode(
     isNewSwap ? swap.lockupDetails.serverPublicKey : LOCKUP_PUBKEY_COMPRESSED,
   ),
 ).compressedPublicKey();
-const lockupClaimLeaf = {
+const mainnetClaimLeaf = {
   script: hex.decode(
     isNewSwap
       ? swap.lockupDetails.swapTree.claimLeaf.output
@@ -294,7 +294,7 @@ const lockupClaimLeaf = {
   leafVersion: swap.lockupDetails.swapTree.claimLeaf.version,
   weight: 51,
 } as const satisfies TaprootNode;
-const lockupRefundLeaf = {
+const mainnetRefundLeaf = {
   script: hex.decode(
     isNewSwap
       ? swap.lockupDetails.swapTree.refundLeaf.output
@@ -309,21 +309,24 @@ const lockupAmount = BigInt(swap.lockupDetails.amount);
 console.log("Reconstructing Arkade claim address...");
 const claimScript = new VHTLC.Script({
   preimageHash: ripemd160(sha256(preimage)),
-  sender: refundPubkey,
+  sender: arkadeBoltzPubkey,
   receiver: userPubkey,
   server: operatorPubkey,
-  refundLocktime,
-  unilateralClaimDelay,
-  unilateralRefundDelay,
-  unilateralRefundWithoutReceiverDelay,
+  refundLocktime: arkadeRefundLocktime,
+  unilateralClaimDelay: arkadeUnilateralClaimDelay,
+  unilateralRefundDelay: arkadeUnilateralRefundDelay,
+  unilateralRefundWithoutReceiverDelay:
+    arkadeUnilateralRefundWithoutReceiverDelay,
 });
 const claimAddress = claimScript.address(NETWORK.hrp, operatorPubkey);
 
 /** Reconstruct lockup address (mainnet) */
 console.log("Reconstructing mainnet lockup address...");
 const lockupAddress = p2tr(
-  keyAggExport(keyAggregate([lockupPubkeyCompressed, userPubkeyCompressed])),
-  [lockupClaimLeaf, lockupRefundLeaf],
+  keyAggExport(
+    keyAggregate([mainnetBoltzPubkeyCompressed, userPubkeyCompressed]),
+  ),
+  [mainnetClaimLeaf, mainnetRefundLeaf],
   NETWORK,
   true,
 ).address;
@@ -368,25 +371,25 @@ if (isNewSwap) {
 `,
       {
         cause: {
-          expectedClaimAmount: SWAP_AMOUNT,
-          claimAddress: claimAddress.encode(),
           lockupAmount,
           lockupAddress,
+          expectedClaimAmount: SWAP_AMOUNT,
+          claimAddress: claimAddress.encode(),
           PREIMAGE: hex.encode(preimage),
-          REFUND_LOCKTIME: refundLocktime,
-          LOCKUP_PUBKEY_COMPRESSED: hex.encode(lockupPubkeyCompressed),
-          LOCKUP_CLAIM_LEAF_SCRIPT: hex.encode(lockupClaimLeaf.script),
-          LOCKUP_REFUND_LEAF_SCRIPT: hex.encode(lockupRefundLeaf.script),
+          REFUND_LOCKTIME: arkadeRefundLocktime,
+          LOCKUP_PUBKEY_COMPRESSED: hex.encode(mainnetBoltzPubkeyCompressed),
+          LOCKUP_CLAIM_LEAF_SCRIPT: hex.encode(mainnetClaimLeaf.script),
+          LOCKUP_REFUND_LEAF_SCRIPT: hex.encode(mainnetRefundLeaf.script),
         },
       },
     );
   }
 } else {
   console.log(`Fetched chain swap:`, {
-    expectedClaimAmount: SWAP_AMOUNT,
-    claimAddress: claimAddress.encode(),
     lockupAmount,
     lockupAddress,
+    expectedClaimAmount: SWAP_AMOUNT,
+    claimAddress: claimAddress.encode(),
   });
 }
 
