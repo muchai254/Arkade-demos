@@ -34,7 +34,6 @@ const NETWORK = networks.mutinynet;
 const OPERATOR_URL = "https://mutinynet.arkade.sh" as const;
 const DELEGATE_URL = "https://delegator.mutinynet.arkade.sh" as const;
 const BOLTZ_API = "https://api.boltz.mutinynet.arkade.sh" as const;
-const MEMPOOL_API = "https://mempool.space/api" as const;
 
 const isNewSwap = hex.decode(PREIMAGE).length !== 32;
 const preimage = isNewSwap ? randomBytes(32) : hex.decode(PREIMAGE);
