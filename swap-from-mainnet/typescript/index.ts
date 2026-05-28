@@ -165,7 +165,7 @@ if (isNewSwap) {
       min: BigInt(data.BTC.ARK.limits.minimal),
       max: BigInt(data.BTC.ARK.limits.maximal),
     }));
-  console.log("Fetched reverse swap limits:", limits);
+  console.log("Fetched chain swap limits:", limits);
 
   if (SWAP_AMOUNT < limits.min) {
     throw new Error(`Amount below swap minimum`, {
@@ -371,7 +371,7 @@ if (isNewSwap) {
     );
   }
 } else {
-  console.log(`Fetched reverse swap:`, {
+  console.log(`Fetched chain swap:`, {
     expectedClaimAmount: SWAP_AMOUNT,
     claimAddress: claimAddress.encode(),
     lockupAmount,
