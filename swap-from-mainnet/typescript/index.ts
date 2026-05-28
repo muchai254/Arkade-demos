@@ -34,6 +34,7 @@ const NETWORK = networks.mutinynet;
 const OPERATOR_URL = "https://mutinynet.arkade.sh" as const;
 const DELEGATE_URL = "https://delegator.mutinynet.arkade.sh" as const;
 const BOLTZ_API = "https://api.boltz.mutinynet.arkade.sh" as const;
+const MEMPOOL_API = "https://mutinynet.com/api" as const;
 
 const isNewSwap = hex.decode(PREIMAGE).length !== 32;
 const preimage = isNewSwap ? randomBytes(32) : hex.decode(PREIMAGE);
@@ -183,6 +184,16 @@ if (isNewSwap) {
       },
     });
   }
+
+  console.log("Fetching recommended fee rate...");
+  const recommendedFeeRate = await ky
+    .get(`${MEMPOOL_API}/v1/fees/recommended`)
+    .json<{
+  fastestFee: number
+    }>()
+    .then(({fastestFee}) => BigInt(fastestFee));
+  console.log("Fetched recommended fee rate:", [recommendedFeeRate]);
+  feeRate = recommendedFeeRate
 }
 
 console.log(
