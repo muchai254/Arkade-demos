@@ -14,12 +14,11 @@ import {
 import { base64, hex, utf8 } from "@scure/base";
 import { OutScript, Script } from "@scure/btc-signer";
 
-const OPERATOR_URL = "https://arkade.computer" as const;
 const ALICE_SEED =
   "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;
 
 console.log("Connecting to operator...");
-const operator = new RestArkProvider(OPERATOR_URL);
+const operator = new RestArkProvider();
 const operatorInfo = await operator.getInfo();
 
 console.log("Setting up operator identity...");
@@ -43,7 +42,7 @@ console.log(
 );
 
 console.log("Connecting to indexer...");
-const indexerProvider = new RestIndexerProvider(OPERATOR_URL);
+const indexerProvider = new RestIndexerProvider();
 
 console.log("Checking spendable balance in address...");
 const vtxos = (

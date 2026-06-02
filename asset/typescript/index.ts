@@ -3,13 +3,10 @@ import {
   InMemoryContractRepository,
   InMemoryWalletRepository,
   RestArkProvider,
-  RestDelegatorProvider,
   SingleKey,
   Wallet,
   type WalletBalance,
 } from "@arkade-os/sdk";
-
-const OPERATOR_URL = "https://arkade.computer" as const;
 
 // decode from nsec using https://www.nostrly.com/nip-19-entity-decoder/
 const PRIVATE_KEY = "" as const;
@@ -48,7 +45,7 @@ const summarizeBalances = async (balance: WalletBalance) => {
 // create wallet
 const wallet = await Wallet.create({
   identity: SingleKey.fromHex(PRIVATE_KEY),
-  arkProvider: new RestArkProvider(OPERATOR_URL),
+  arkProvider: new RestArkProvider(),
   settlementConfig: false, // Don't auto-renew VTXOs
   storage: {
     // node doesn't have indexedDB, so we have to specify in-memory repos here

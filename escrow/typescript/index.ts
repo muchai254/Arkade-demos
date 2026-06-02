@@ -13,8 +13,6 @@ import {
 } from "@arkade-os/sdk";
 import { base64, hex } from "@scure/base";
 
-const OPERATOR_URL = "https://arkade.computer" as const;
-
 // Can co-sign a payout/refund with either player, or sweep after a timeout
 const ARBITER_SEED =
   "legal winner thank year wave sausage worth useful legal winner thank yellow" as const;
@@ -86,7 +84,7 @@ const generateEscrowScript = async (
 };
 
 console.log("Connecting to operator...");
-const operator = new RestArkProvider(OPERATOR_URL);
+const operator = new RestArkProvider();
 const operatorInfo = await operator.getInfo();
 
 console.log("Setting up operator identity...");
@@ -120,7 +118,7 @@ console.log("Generated address:", address);
 console.log("Expiry (absolute timelock):", expiry);
 
 console.log("Connecting to indexer...");
-const indexerProvider = new RestIndexerProvider(OPERATOR_URL);
+const indexerProvider = new RestIndexerProvider();
 
 console.log("Checking spendable balance in escrow address...");
 const vtxos = (

@@ -5,7 +5,7 @@ import {
   InMemoryWalletRepository,
   MultisigTapscript,
   RestArkProvider,
-  RestDelegatorProvider,
+  RestDelegateProvider,
   SingleKey,
   VtxoScript,
   Wallet,
@@ -20,7 +20,6 @@ globalThis.EventSource ??= EventSource as never;
 
 const ALICE_SEED =
   "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;
-const OPERATOR_URL = "https://arkade.computer" as const;
 const DELEGATE_URL = "https://delegate.arkade.money" as const;
 
 /** 1. Convert mnemonic phrase into 64 byte seed */
@@ -47,7 +46,7 @@ console.log("Extracted user public key:", [hex.encode(userPubkey)]);
 
 /** 5. Fetch Arkade operator info */
 console.log("Connecting to Arkade operator...");
-const operator = new RestArkProvider(OPERATOR_URL);
+const operator = new RestArkProvider();
 const operatorInfo = await operator.getInfo();
 
 /** 6. Extract operator public key */
@@ -82,7 +81,7 @@ console.log("Generated default Arkade address:", [defaultAddress]);
 
 /** 9. Fetch delegate info */
 console.log("Connecting to delegate...");
-const delegate = new RestDelegatorProvider(DELEGATE_URL);
+const delegate = new RestDelegateProvider(DELEGATE_URL);
 const delegateInfo = await delegate.getDelegateInfo();
 
 /** 10. Extract delegate public key */
@@ -109,7 +108,7 @@ console.log("Generated delegated Arkade address:", [delegatedAddress]);
 const wallet = await Wallet.create({
   identity: SingleKey.fromPrivateKey(accountNode.privateKey!),
   arkProvider: operator,
-  delegatorProvider: delegate,
+  delegateProvider: delegate,
   settlementConfig: false, // Don't auto-renew VTXOs
   storage: {
     // node doesn't have indexedDB, so we have to specify in-memory repos here

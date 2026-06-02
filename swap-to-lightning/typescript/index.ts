@@ -6,7 +6,7 @@ import {
   networks,
   ReadonlySingleKey,
   RestArkProvider,
-  RestDelegatorProvider,
+  RestDelegateProvider,
   RestIndexerProvider,
   Transaction,
   VHTLC,
@@ -52,7 +52,7 @@ const checkpointTapscript = CSVMultisigTapscript.decode(
 console.log("Operator public key:", [hex.encode(operatorPubkey)]);
 
 console.log("Connecting to delegate...");
-const delegate = new RestDelegatorProvider(DELEGATE_URL);
+const delegate = new RestDelegateProvider(DELEGATE_URL);
 const delegateInfo = await delegate.getDelegateInfo();
 const delegatePubkey = await ReadonlySingleKey.fromPublicKey(
   hex.decode(delegateInfo.pubkey),

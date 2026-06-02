@@ -15,7 +15,6 @@ import { NETWORK } from "@scure/btc-signer";
 
 const ALICE_SEED =
   "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;
-const OPERATOR_URL = "https://arkade.computer" as const;
 
 /** 1. Convert mnemonic phrase into 64 byte seed */
 console.log("Converting mnemonic phrase to seed...");
@@ -41,7 +40,7 @@ console.log("Extracted user public key:", [hex.encode(userPubkey)]);
 
 /** 5. Fetch Arkade operator info */
 console.log("Connecting to Arkade operator...");
-const operator = new RestArkProvider(OPERATOR_URL);
+const operator = new RestArkProvider();
 const operatorInfo = await operator.getInfo();
 
 /** 6. Extract operator public key */

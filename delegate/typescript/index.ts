@@ -9,7 +9,7 @@ import {
   ReadonlySingleKey,
   type RelativeTimelock,
   RestArkProvider,
-  RestDelegatorProvider,
+  RestDelegateProvider,
   RestIndexerProvider,
   type SignedIntent,
   Transaction,
@@ -54,10 +54,10 @@ console.log("Extracted operator information:", {
 });
 
 console.log("Connecting to delegate...");
-const delegateProvider = new RestDelegatorProvider(DELEGATE_URL);
+const delegateProvider = new RestDelegateProvider(DELEGATE_URL);
 const {
   pubkey: _delegatePubkey,
-  delegatorAddress: _delegateAddress,
+  delegateAddress: _delegateAddress,
   fee: _delegateFee,
 } = await delegateProvider.getDelegateInfo();
 const delegateIdentity = ReadonlySingleKey.fromPublicKey(
