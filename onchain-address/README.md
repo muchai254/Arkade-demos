@@ -13,3 +13,6 @@ Related: [boarding-address](https://github.com/arkade-os/demos/tree/master/board
 
 ### TypeScript
 `pnpm install && pnpm dev`
+
+### Rust
+`cargo run`
