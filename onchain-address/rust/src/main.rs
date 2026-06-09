@@ -1,9 +1,9 @@
-use bdk_wallet::{KeychainKind, Wallet, template::Bip84};
+use bdk_wallet::{template::Bip84, KeychainKind, Wallet};
 use bip39::Mnemonic;
 use bitcoin::{
-    Address, Network,
     bip32::{DerivationPath, Xpriv, Xpub},
     key::{CompressedPublicKey, Secp256k1},
+    Address, Network,
 };
 use std::str::FromStr;
 
@@ -51,7 +51,7 @@ fn main() -> anyhow::Result<()> {
         standard_address
     );
 
-    /* 7. Validate against ark-bdk-wallet */
+    /* 7. Validate against Arkade SDK helper */
     let ark_wallet = Wallet::create(
         Bip84(master_xpriv, KeychainKind::External),
         Bip84(master_xpriv, KeychainKind::Internal),
