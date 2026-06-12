@@ -26,7 +26,7 @@ const REFUND_LOCKTIME = 0n as const;
 const LOCKUP_PUBKEY_COMPRESSED = "" as const;
 const LOCKUP_CLAIM_LEAF_SCRIPT = "" as const;
 const LOCKUP_REFUND_LEAF_SCRIPT = "" as const;
-const SWAP_AMOUNT = 50_000n;
+const SWAP_AMOUNT = 2_500n as const;
 
 const ALICE_SEED =
   "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;

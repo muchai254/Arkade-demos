@@ -29,7 +29,7 @@ import { type TaprootNode } from "@scure/btc-signer/payment.js";
 import { tagSchnorr } from "@scure/btc-signer/utils.js";
 import ky from "ky";
 
-const SWAP_AMOUNT = 2_500n;
+const SWAP_AMOUNT = 2_500n as const;
 const MAINNET_ADDRESS = "tb1qmt3ue2senlg6ddgmr76hwsk0rdvdk4rgeaen7l";
 
 const ALICE_SEED =

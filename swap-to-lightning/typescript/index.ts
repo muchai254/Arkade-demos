@@ -17,7 +17,7 @@ import { Script } from "@scure/btc-signer";
 import ky from "ky";
 import bolt11 from "light-bolt11-decoder";
 
-const INVOICE_AMOUNT = 1_000n as const;
+const INVOICE_AMOUNT = 500n as const;
 const LN_ADDRESS = "refund@lnurl.mutinynet.com" as const;
 
 const ALICE_SEED =

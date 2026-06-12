@@ -22,7 +22,7 @@ import bolt11 from "light-bolt11-decoder";
 
 const PREIMAGE = "" as const;
 const REFUND_LOCKTIME = 0n as const;
-const INVOICE_AMOUNT = 1_000n;
+const INVOICE_AMOUNT = 500n as const;
 
 const ALICE_SEED =
   "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;
