@@ -8,12 +8,13 @@ use ark_core::{anchor_output, ArkAddress, UNSPENDABLE_KEY};
 use ark_rest::Client;
 use bip39::Mnemonic;
 use bitcoin::base64::{engine::general_purpose::STANDARD, Engine};
-use bitcoin::key::{Keypair, PublicKey, Secp256k1};
-use bitcoin::script::PushBytesBuf;
+use bitcoin::key::{Keypair, PublicKey, Secp256k1, TweakedPublicKey};
+use bitcoin::opcodes::all::OP_RETURN;
+use bitcoin::script::Instruction;
 use bitcoin::taproot::LeafVersion;
 use bitcoin::{
-    bip32::{DerivationPath, Xpriv, Xpub},
-    psbt, Amount, Network, ScriptBuf, TxOut, XOnlyPublicKey,
+    bip32::{DerivationPath, Xpriv},
+    psbt, Amount, ScriptBuf, TxOut, XOnlyPublicKey,
 };
 use std::str::FromStr;
 use std::time::Duration;
@@ -34,15 +35,14 @@ async fn main() -> anyhow::Result<()> {
     let server_xonly = server_info.signer_pk.x_only_public_key().0;
 
     println!("Setting up Alice identity...");
+    let network = server_info.network;
     let mnemonic: Mnemonic = ALICE_MNEMONIC.parse()?;
     let seed = mnemonic.to_seed("");
-    let master_xpriv = Xpriv::new_master(Network::Bitcoin, &seed)?;
+    let master_xpriv = Xpriv::new_master(network, &seed)?;
     let path = DerivationPath::from_str("m/86'/0'/0'/0/0")?;
     let child_xpriv = master_xpriv.derive_priv(&secp, &path)?;
-    let xpub = Xpub::from_priv(&secp, &child_xpriv);
-    let user_xonly = xpub.public_key.x_only_public_key().0;
     let keypair = Keypair::from_secret_key(&secp, &child_xpriv.private_key);
-    let (alice_xonly, _) = keypair.x_only_public_key();
+    let (user_xonly, _) = keypair.x_only_public_key();
 
     println!("Generating simple address with collaborative spend path...");
     let unspendable_key: PublicKey = UNSPENDABLE_KEY.parse()?;
@@ -59,7 +59,7 @@ async fn main() -> anyhow::Result<()> {
         .map_err(|_| anyhow::anyhow!("failed to finalize taproot"))?;
 
     let script_pubkey = tr_script_pubkey(&spend_info);
-    let self_address = ArkAddress::new(Network::Bitcoin, server_xonly, spend_info.output_key());
+    let self_address = ArkAddress::new(network, server_xonly, spend_info.output_key());
     println!("Generated address: ['{}']", self_address.encode());
 
     println!("Connecting to indexer...");
@@ -79,6 +79,7 @@ async fn main() -> anyhow::Result<()> {
     println!("Spendable balance: {balance}");
 
     if balance == 0 {
+        println!("No spendable VTXOs found. Send funds to the address above and try again.");
         return Ok(());
     }
 
@@ -104,8 +105,6 @@ async fn main() -> anyhow::Result<()> {
         })
         .collect();
 
-    let self_address = ArkAddress::new(Network::Bitcoin, server_xonly, spend_info.output_key());
-
     let subdust_receiver = SendReceiver::bitcoin(self_address.clone(), Amount::from_sat(1));
     let change_receiver =
         SendReceiver::bitcoin(self_address.clone(), balance - Amount::from_sat(1));
@@ -120,10 +119,14 @@ async fn main() -> anyhow::Result<()> {
     .map_err(|e| anyhow::anyhow!("{e}"))?;
 
     let data = b"hello world!";
-    let push_bytes = PushBytesBuf::try_from(data.to_vec())
+    let push_bytes = bitcoin::script::PushBytesBuf::try_from(data.to_vec())
         .map_err(|_| anyhow::anyhow!("data too large for OP_RETURN"))?;
     let op_return_script = ScriptBuf::new_op_return(&push_bytes);
 
+    // The Rust SDK's build_offchain_transactions only accepts ArkAddress outputs, unlike the
+    // TypeScript buildOffchainTx which accepts raw scripts. Injecting the data OP_RETURN here
+    // mirrors the TypeScript demo; the operator permits extra OP_RETURN outputs up to
+    // server_info.max_op_return_outputs.
     let anchor_index = offchain_txs.ark_tx.unsigned_tx.output.len() - 1;
     offchain_txs.ark_tx.unsigned_tx.output.insert(
         anchor_index,
@@ -136,6 +139,14 @@ async fn main() -> anyhow::Result<()> {
         .ark_tx
         .outputs
         .insert(anchor_index, psbt::Output::default());
+
+    let op_return_count = count_op_return_outputs(&offchain_txs.ark_tx.unsigned_tx);
+    if op_return_count > server_info.max_op_return_outputs as usize {
+        anyhow::bail!(
+            "transaction has {op_return_count} OP_RETURN outputs but the server allows at most {}",
+            server_info.max_op_return_outputs
+        );
+    }
 
     let ark_tx_b64 = STANDARD.encode(offchain_txs.ark_tx.serialize());
     println!("Generated Arkade transaction: ['{ark_tx_b64}']");
@@ -151,7 +162,7 @@ async fn main() -> anyhow::Result<()> {
         sign_ark_transaction(
             |_input, msg| {
                 let sig = secp.sign_schnorr_no_aux_rand(&msg, &keypair);
-                Ok(vec![(sig, alice_xonly)])
+                Ok(vec![(sig, user_xonly)])
             },
             &mut offchain_txs.ark_tx,
             i,
@@ -182,7 +193,7 @@ async fn main() -> anyhow::Result<()> {
         sign_checkpoint_transaction(
             |_input, msg| {
                 let sig = secp.sign_schnorr_no_aux_rand(&msg, &keypair);
-                Ok(vec![(sig, alice_xonly)])
+                Ok(vec![(sig, user_xonly)])
             },
             &mut checkpoint_psbt,
         )
@@ -231,9 +242,9 @@ async fn main() -> anyhow::Result<()> {
 
             if let Some(pubkey) = parse_p2tr_pubkey(script) {
                 let address = ArkAddress::new(
-                    Network::Bitcoin,
+                    network,
                     server_xonly,
-                    bitcoin::key::TweakedPublicKey::dangerous_assume_tweaked(pubkey),
+                    TweakedPublicKey::dangerous_assume_tweaked(pubkey),
                 );
                 println!(
                     "Found standard payment at index #{vout} with amount {amount} ['{}']",
@@ -247,9 +258,9 @@ async fn main() -> anyhow::Result<()> {
                     let pubkey = XOnlyPublicKey::from_slice(&data)
                         .map_err(|e| anyhow::anyhow!("invalid subdust pubkey: {e}"))?;
                     let address = ArkAddress::new(
-                        Network::Bitcoin,
+                        network,
                         server_xonly,
-                        bitcoin::key::TweakedPublicKey::dangerous_assume_tweaked(pubkey),
+                        TweakedPublicKey::dangerous_assume_tweaked(pubkey),
                     );
                     println!(
                         "Found subdust payment at index #{vout} with amount {amount} ['{}']",
@@ -271,6 +282,13 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+fn count_op_return_outputs(tx: &bitcoin::Transaction) -> usize {
+    tx.output
+        .iter()
+        .filter(|output| parse_op_return(&output.script_pubkey).is_some())
+        .count()
+}
+
 fn parse_p2tr_pubkey(script: &ScriptBuf) -> Option<XOnlyPublicKey> {
     let bytes = script.as_bytes();
     if bytes.len() == 34 && bytes[0] == 0x51 && bytes[1] == 0x20 {
@@ -281,10 +299,12 @@ fn parse_p2tr_pubkey(script: &ScriptBuf) -> Option<XOnlyPublicKey> {
 }
 
 fn parse_op_return(script: &ScriptBuf) -> Option<Vec<u8>> {
-    let bytes = script.as_bytes();
-    if bytes.first() == Some(&0x6a) {
-        Some(bytes[1..].to_vec())
-    } else {
-        None
+    let mut instructions = script.instructions();
+    if !matches!(instructions.next(), Some(Ok(Instruction::Op(OP_RETURN)))) {
+        return None;
     }
+    let Some(Ok(Instruction::PushBytes(bytes))) = instructions.next() else {
+        return None;
+    };
+    Some(bytes.as_bytes().to_vec())
 }
