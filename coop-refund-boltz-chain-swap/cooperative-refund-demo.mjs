@@ -40,19 +40,19 @@
  * Mapping to Boltz source
  * -----------------------------------------------------------------------------
  *
- * This mirrors the shape of:
+ * This mirrors the shape of boltz-web-app's cooperative signing flow
+ * (see src/utils/claim.ts) and boltz-core's MuSig helpers:
  *
- * - src/utils/taproot/musig.ts
- * - src/utils/rescue.ts
- *
- * Especially:
- * - createMusig(...)
- * - tweakMusig(...)
- * - hashForWitnessV1(...)
+ * - createMusig(...)        -> Musig.create(...)
+ * - tweakMusig(...)         -> TaprootUtils.tweakMusig(...)
+ * - hashForWitnessV1(...)   -> tx.preimageWitnessV1(...)
  * - fresh session per input
- * - getPartialRefundSignature(...)
  * - addPartial(...)
  * - aggregatePartials(...)
+ *
+ * In the real flow the client requests the server's partial signature over an
+ * HTTP API. For a chain-swap REFUND that is `POST /v2/swap/chain/{id}/refund`
+ * with `{ index, transaction, pubNonce }` and, unlike a CLAIM, NO preimage.
  *
  * -----------------------------------------------------------------------------
  * Important note
@@ -61,16 +61,20 @@
  * This demo uses:
  * - real MuSig session handling
  * - real Taproot witness-v1 preimage generation
- * - real final aggregate signatures
+ * - real final aggregate signatures, verified against the on-chain output key
  *
  * But it still uses:
  * - synthetic UTXOs
  * - a fake local server function instead of a real HTTP API
  * - a simplified demo TapTree rather than a real swap tree from backend data
+ *
+ * So it demonstrates the cooperative-signing PRIMITIVE correctly; it does not
+ * talk to a live Boltz backend. The existing `swap-to-mainnet` demo shows the
+ * full, networked cooperative (claim) flow against the real API.
  */
 
 import { hex } from '@scure/base';
-import { secp256k1 } from '@noble/curves/secp256k1.js';
+import { secp256k1, schnorr } from '@noble/curves/secp256k1.js';
 import { Transaction, SigHash, p2tr } from '@scure/btc-signer';
 import { Musig, TaprootUtils } from 'boltz-core';
 
@@ -131,16 +135,32 @@ function createMusigFixed(localPrivateKey, participantPubkeysOrdered) {
 // -----------------------------------------------------------------------------
 //
 // In the real Boltz flow, the aggregate key is tweaked by the actual swap tree.
-// Cooperative refund uses the key path, but the tweak still matters.
+// Cooperative refund uses the key path, but the tweak still matters: the Taproot
+// output key committed on-chain is `taptweak(musigInternalKey, merkleRoot(tree))`.
 //
 // This is a simplified placeholder tree just to preserve the architecture.
 //
+// IMPORTANT: the SAME logical tree must drive two things that have to agree:
+//   - the locking script (via `@scure/btc-signer`'s p2tr), and
+//   - the MuSig signing tweak (via boltz-core's TaprootUtils.tweakMusig).
+// The two libraries name the leaf fields differently, so we keep one canonical
+// definition and expose both representations from it.
+//
 
 function makeDemoTree() {
+  // boltz-core leaf shape: { output, version }
   return [
     { output: Buffer.from([0x51]), version: 0xc0 },
     { output: Buffer.from([0x51]), version: 0xc0 },
   ];
+}
+
+function toScureTree(tree) {
+  // @scure/btc-signer leaf shape: { script, leafVersion }
+  return tree.map((leaf) => ({
+    script: leaf.output,
+    leafVersion: leaf.version,
+  }));
 }
 
 // -----------------------------------------------------------------------------
@@ -407,7 +427,23 @@ function main() {
   console.log('   output key:    ', short(tweaked.aggPubkey));
 
   // 4. Create synthetic Taproot swap output script
-  const lockScript = p2tr(tweaked.aggPubkey).script;
+  //
+  // The output key committed on-chain MUST equal the key the MuSig session
+  // signs for. `tweaked.aggPubkey` is already the tweaked output key, so we
+  // build the P2TR from the UNTWEAKED internal key (`keyAgg.aggPubkey`) plus
+  // the same tree and let p2tr apply the (single) BIP341 tweak.
+  //
+  // Passing `tweaked.aggPubkey` to p2tr would tweak a second time, producing an
+  // output key that no longer matches the signature -> the witness would be
+  // rejected on broadcast. We assert the two derivations agree below.
+  const lockup = p2tr(keyAgg.aggPubkey, toScureTree(tree), undefined, true);
+  const lockScript = lockup.script;
+
+  if (hex.encode(lockScript.slice(2)) !== hex.encode(tweaked.aggPubkey)) {
+    throw new Error(
+      'Locking output key does not match tweaked MuSig key (tweak mismatch)',
+    );
+  }
 
   console.log('\n4. Locking script');
   console.log('   script:        ', short(lockScript), '...');
@@ -454,35 +490,37 @@ function main() {
     console.log('   E) user partial sig:      ', short(result.userPartialSignature));
     console.log('   F) final schnorr sig:     ', short(result.finalSignature));
 
+    // Verify the aggregate signature against the on-chain output key BEFORE
+    // trusting it. This is the check that proves the cooperative signing (and
+    // the tweak) actually produced a spendable key-path witness.
+    const verified = schnorr.verify(
+      result.finalSignature,
+      result.sigHash,
+      tweaked.aggPubkey,
+    );
+    if (!verified) {
+      throw new Error(`Aggregate signature failed to verify for input ${inputIndex}`);
+    }
+    console.log('   G) signature verified:     ✓');
+
     // Key-path Taproot witness = [signature]
-    tx.inputs[inputIndex].finalScriptWitness = [result.finalSignature];
-    console.log('   G) witness set');
+    tx.updateInput(inputIndex, {
+      finalScriptWitness: [result.finalSignature],
+    });
+    console.log('   H) witness set');
   }
 
-  // 9. Print transaction object
-  console.log('\n8. Final transaction object');
-  console.dir(tx, { depth: 4 });
+  // 9. Serialize the finalized transaction.
+  //
+  // Every input now carries a verified key-path witness, so the transaction is
+  // fully finalized and `tx.hex` (a getter on @scure/btc-signer's Transaction)
+  // returns the broadcastable hex.
+  const txHex = tx.hex;
 
-  // 10. Serialize tx hex in a version-tolerant way
-  let txHex;
-  if (typeof tx.hex === 'function') {
-    txHex = tx.hex();
-  } else if (typeof tx.hex === 'string') {
-    txHex = tx.hex;
-  } else if (tx.hex instanceof Uint8Array) {
-    txHex = hex.encode(tx.hex);
-  } else if (typeof tx.toHex === 'function') {
-    txHex = tx.toHex();
-  } else if (typeof tx.toBytes === 'function') {
-    txHex = hex.encode(tx.toBytes());
-  } else {
-    txHex = '<could not serialize tx hex with this @scure/btc-signer version>';
-  }
-
-  console.log('\n9. Final tx hex');
+  console.log('\n8. Final tx hex');
   console.log(txHex);
 
-  console.log('\n10. Key lesson');
+  console.log('\n9. Key lesson');
   console.log('   Both parties must use the SAME ordered pubkey array.');
   console.log('   Only the local private key and local secret nonce differ.');
   console.log('   Everything else in the session transcript must match.');

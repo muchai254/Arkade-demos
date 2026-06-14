@@ -1,10 +1,11 @@
 {
   "name": "coop-refund-boltz-chain-swap",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Standalone demo of cooperative MuSig2 Taproot key-path signing, modeled on Boltz cooperative chain-swap refunds.",
+  "type": "module",
+  "main": "cooperative-refund-demo.mjs",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node cooperative-refund-demo.mjs"
   },
   "keywords": [],
   "author": "tiero",
