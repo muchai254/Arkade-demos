@@ -150,8 +150,8 @@ function createMusigFixed(localPrivateKey, participantPubkeysOrdered) {
 function makeDemoTree() {
   // boltz-core leaf shape: { output, version }
   return [
-    { output: Buffer.from([0x51]), version: 0xc0 },
-    { output: Buffer.from([0x51]), version: 0xc0 },
+    { output: new Uint8Array([0x51]), version: 0xc0 },
+    { output: new Uint8Array([0x51]), version: 0xc0 },
   ];
 }
 
