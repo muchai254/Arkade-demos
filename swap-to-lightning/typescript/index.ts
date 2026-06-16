@@ -18,10 +18,10 @@ import ky from "ky";
 import bolt11 from "light-bolt11-decoder";
 
 const INVOICE_AMOUNT = 500n as const;
-const LN_ADDRESS = "refund@lnurl.mutinynet.com" as const;
-
+const LN_ADDRESS = "refund@lnurl.mutinynet.com" as const; // from faucet.mutinynet.com
 const ALICE_SEED =
   "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;
+
 const NETWORK = networks.mutinynet;
 const OPERATOR_URL = "https://mutinynet.arkade.sh" as const;
 const DELEGATE_URL = "https://delegator.mutinynet.arkade.sh" as const;

@@ -18,7 +18,12 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { randomBytes } from "@noble/hashes/utils.js";
 import { base64, hex } from "@scure/base";
 import { keyAggExport, keyAggregate } from "@scure/btc-signer/musig2.js";
-import { p2tr, type TaprootNode } from "@scure/btc-signer/payment.js";
+import {
+  Address,
+  OutScript,
+  p2tr,
+  type TaprootNode,
+} from "@scure/btc-signer/payment.js";
 import ky from "ky";
 
 const PREIMAGE = "" as const;
@@ -26,15 +31,28 @@ const REFUND_LOCKTIME = 0n as const;
 const LOCKUP_PUBKEY_COMPRESSED = "" as const;
 const LOCKUP_CLAIM_LEAF_SCRIPT = "" as const;
 const LOCKUP_REFUND_LEAF_SCRIPT = "" as const;
-const SWAP_AMOUNT = 2_500n as const;
 
+const SWAP_AMOUNT = 2_500n as const;
+const MAINNET_ADDRESS = "tb1qmt3ue2senlg6ddgmr76hwsk0rdvdk4rgeaen7l" as const; // from faucet.mutinynet.com
 const ALICE_SEED =
   "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;
+
 const NETWORK = networks.mutinynet;
 const OPERATOR_URL = "https://mutinynet.arkade.sh" as const;
 const DELEGATE_URL = "https://delegator.mutinynet.arkade.sh" as const;
 const BOLTZ_API = "https://api.boltz.mutinynet.arkade.sh" as const;
 const MEMPOOL_API = "https://mempool.mutinynet.arkade.sh/api" as const;
+
+/** Verify `MAINNET_ADDRESS` (used for refund) */
+let mainnetPkScript: Uint8Array<ArrayBufferLike> | undefined;
+try {
+  console.log("Extracting mainnet pkScript:", [MAINNET_ADDRESS]);
+  mainnetPkScript = OutScript.encode(Address(NETWORK).decode(MAINNET_ADDRESS)!);
+} catch (_error) {
+  throw new Error("Invalid MAINNET_ADDRESS", {
+    cause: MAINNET_ADDRESS,
+  });
+}
 
 const isNewSwap = hex.decode(PREIMAGE).length !== 32;
 const preimage = isNewSwap ? randomBytes(32) : hex.decode(PREIMAGE);
