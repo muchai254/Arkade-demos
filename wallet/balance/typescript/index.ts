@@ -69,12 +69,8 @@ const wallet = await Wallet.create({
   },
 });
 
-/** 5. Log wallet addresses (standard + boarding) and balance */
-console.log({
-  arkadeAddress: await wallet.getAddress(),
-  boardingAddress: await wallet.getBoardingAddress(),
-  balance: await wallet.getBalance(),
-});
+/** 5. Log wallet balance */
+console.log(await wallet.getBalance());
 
 /** 6. Close the wallet */
 await wallet.dispose();
