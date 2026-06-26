@@ -69,17 +69,14 @@ const wallet = await Wallet.create({
   },
 });
 
-/** 5. Log virtual outputs */
-console.log(
-  await wallet
-    .getVtxos({
-      /** Exclude recoverable (non-spendable) outputs */
-      withRecoverable: false,
-    })
-    .then((outputs) =>
-      outputs.map(({ txid, vout, value }) => ({ txid, vout, value })),
-    ),
-);
+/** 5. Fetch spendable outputs */
+const outputs = await wallet.getVtxos({
+  /** Exclude recoverable (non-spendable) outputs */
+  withRecoverable: false,
+});
 
-/** 6. Close the wallet */
+/** 6. Log spendable outputs (map to basic details) */
+console.log(outputs.map(({ txid, vout, value }) => ({ txid, vout, value })));
+
+/** 7. Close the wallet */
 await wallet.dispose();
