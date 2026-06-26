@@ -39,7 +39,8 @@ const wallet = await Wallet.create({
   },
 });
 
-/** 3. Log wallet address */
+/** 3. Log wallet addresses (standard + boarding) */
 console.log({
-  address: await wallet.getAddress(),
+  arkadeAddress: await wallet.getAddress(),
+  boardingAddress: await wallet.getBoardingAddress(),
 });
