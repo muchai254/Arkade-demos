@@ -20,3 +20,6 @@ Demonstrates:
 
 ### TypeScript
 `pnpm install && pnpm dev`
+
+### Rust
+`cargo run`
