@@ -1,5 +1,4 @@
 import {
-  DefaultVtxo,
   DelegateVtxo,
   MnemonicIdentity,
   type RelativeTimelock,
@@ -46,7 +45,7 @@ const DELEGATED_VTXO_OPTIONS = {
   csvTimelock: exitTimelock,
 } as const satisfies DelegateVtxo.Options;
 
-const delegatedTapscript = new DefaultVtxo.Script(DELEGATED_VTXO_OPTIONS);
+const delegatedTapscript = new DelegateVtxo.Script(DELEGATED_VTXO_OPTIONS);
 
 /** 7. Log user public key, operator public key, delegate pubkey, exit timelock, tweaked public key, script public key, and address */
 console.log({
