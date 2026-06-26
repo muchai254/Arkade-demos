@@ -2,3 +2,4 @@
 **/golang/golang-*-demo
 **/rust/target/*
 **/rust/Cargo.lock
+*.sqlite
