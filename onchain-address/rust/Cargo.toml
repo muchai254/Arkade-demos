@@ -1,0 +1,11 @@
+[package]
+name = "onchain-address"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1"
+bip39 = "2.0"
+bitcoin = { version = "0.32.7", features = ["rand"] }
+bdk_wallet = "1.0.0"
+hex = "0.4"
