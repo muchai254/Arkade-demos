@@ -6,6 +6,11 @@ import {
 } from "@arkade-os/sdk";
 import { hex } from "@scure/base";
 
+/**
+ * Only absolute timelocks (CheckLockTimeVerify) are supported within Arkade.
+ * Relative timelocks (CheckSequenceVerify) are reserved for unilateral exits.
+ */
+
 const SEED_PHRASE =
   "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;
 const ABSOLUTE_TIMELOCK = 1775000000n as const; // 31 March 2026
