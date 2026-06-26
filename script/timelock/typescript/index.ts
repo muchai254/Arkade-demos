@@ -28,7 +28,10 @@ const operatorInfo = await operator.getInfo();
 /** 4. Extract operator x-only public key */
 const operatorPubkey = hex.decode(operatorInfo.signerPubkey).slice(1);
 
-/** 5. Construct tapscript with single CLTV timelock path */
+/**
+ * 5. Construct tapscript with single CLTV timelock path
+ * Note: Delegate path intentionally excluded, as there is currently no mechanism for preventing the user + delegate collaborating to bypass the timelock
+ */
 const cltvTapscript = new VtxoScript([
   CLTVMultisigTapscript.encode({
     pubkeys: [userPubkey, operatorPubkey],
