@@ -14,3 +14,6 @@ Related: [onchain-address](https://github.com/arkade-os/demos/tree/master/onchai
 
 ### TypeScript
 `pnpm install && pnpm dev`
+
+### Rust
+`cargo run`
