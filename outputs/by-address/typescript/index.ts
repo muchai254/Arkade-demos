@@ -21,4 +21,11 @@ const { vtxos: outputs } = await indexer.getVtxos({
 });
 
 /** 4. Log spendable outputs (map to basic details) */
-console.log(outputs.map(({ txid, vout, value }) => ({ txid, vout, value })));
+console.log(
+  outputs.map(({ txid, vout, value, virtualStatus: { state: status } }) => ({
+    txid,
+    vout,
+    value,
+    status,
+  })),
+);
