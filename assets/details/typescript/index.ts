@@ -23,7 +23,7 @@ const controlAssetDetails = await indexer.getAssetDetails(
   assetDetails.controlAssetId,
 );
 
-/** 4. Log metadata for both assets */
+/** 4. Log details for both assets */
 console.log({
   assetDetails,
   controlAssetDetails,
