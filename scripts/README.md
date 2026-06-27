@@ -1,1 +1,1 @@
-network: mutinynet
+network: bitcoin
