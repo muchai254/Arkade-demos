@@ -23,11 +23,11 @@ const DELEGATE_URL = "https://delegator.mutinynet.arkade.sh" as const;
  */
 (globalThis as any).EventSource = EventSource;
 
-/** 2. Create SQL executor */
-const createSQLExecutor = (dbPath: string): SQLExecutor => {
+/** 2. Initialize SQLite database */
+const initDB = (dbPath: string) => {
   const db = new Database(dbPath);
   db.pragma("journal_mode = WAL");
-  return {
+  const sqlExecutor = {
     run: async (sql, params) => {
       db.prepare(sql).run(...(params ?? []));
     },
@@ -35,9 +35,11 @@ const createSQLExecutor = (dbPath: string): SQLExecutor => {
       db.prepare(sql).get(...(params ?? [])) as T | undefined,
     all: async <T>(sql: string, params?: unknown[]) =>
       db.prepare(sql).all(...(params ?? [])) as T[],
-  };
+  } as const satisfies SQLExecutor;
+  const closeDB = () => db.close();
+  return { sqlExecutor, closeDB };
 };
-const executor = createSQLExecutor("wallet.sqlite");
+const { sqlExecutor, closeDB } = initDB("wallet.sqlite");
 
 /** 3. Create identity */
 const identity = MnemonicIdentity.fromMnemonic(SEED_PHRASE, {
@@ -64,13 +66,17 @@ const wallet = await Wallet.create({
    * Defaults to IndexedDB if undefined
    */
   storage: {
-    walletRepository: new SQLiteWalletRepository(executor),
-    contractRepository: new SQLiteContractRepository(executor),
+    walletRepository: new SQLiteWalletRepository(sqlExecutor),
+    contractRepository: new SQLiteContractRepository(sqlExecutor),
   },
 });
 
 /** 5. Log wallet balance */
 console.log(await wallet.getBalance());
 
-/** 6. Close the wallet */
+/** 6. Graceful shutdown */
+console.log("Disposing wallet...");
 await wallet.dispose();
+
+console.log("Closing database...");
+closeDB();

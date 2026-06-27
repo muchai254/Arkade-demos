@@ -65,7 +65,7 @@ const wallet = await Wallet.create({
    */
   walletMode: "static",
   /**
-   * Explicitly use in-memory storage
+   * Explicitly use SQLite storage
    * Defaults to IndexedDB if undefined
    */
   storage: {
@@ -121,14 +121,14 @@ if (process.stdin.isTTY) {
   process.stdin.resume();
   process.stdin.once("data", async () => {
     try {
+      console.log("Stopping notifications...");
       stopNotifying();
-      console.log("Stopped notifying");
 
+      console.log("Disposing wallet...");
       await wallet.dispose();
-      console.log("Disposed wallet");
 
+      console.log("Closing database...");
       closeDB();
-      console.log("Closed database");
 
       process.exit(0);
     } catch (error) {
