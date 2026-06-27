@@ -84,9 +84,7 @@ const toBurn = assets.filter(({ assetId }) => !IGNORE_ASSETS.includes(assetId));
 
 if (!toBurn.length) {
   throw new Error("Could not find any assets to burn", {
-    cause: {
-      address: await wallet.getAddress(),
-    },
+    cause: await wallet.getAddress(),
   });
 }
 
