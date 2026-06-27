@@ -101,13 +101,22 @@ const { arkTxId: issueTxid, assetId } = await manager.issue({
 
 console.log(`Issued asset with control asset: ${EXPLORER_URL}/tx/${issueTxid}`);
 
-/** 8. Print summary */
+/** 8. Reissue asset with control asset */
+const reissueTxid = await manager.reissue({
+  amount: 100n /** 1, adjusted for 2 decimals */,
+  assetId,
+});
+
+console.log(`Reissued asset: ${EXPLORER_URL}/tx/${reissueTxid}`);
+
+/** 9. Print summary */
 console.log({
   controlAssetId,
   controlIssueTxid,
   assetId,
   issueTxid,
+  reissueTxid,
 });
 
-/** 9. Close the wallet */
+/** 10. Close the wallet */
 await wallet.dispose();
