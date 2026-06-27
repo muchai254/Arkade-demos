@@ -2,6 +2,7 @@ import {
   DefaultVtxo,
   DelegateVtxo,
   MnemonicIdentity,
+  networks,
   type RelativeTimelock,
   RestArkProvider,
   RestDelegateProvider,
@@ -27,9 +28,14 @@ const deprecatedOperatorPubkeys = operatorInfo.deprecatedSigners.map(
   ({ pubkey }) => hex.decode(pubkey).slice(1),
 );
 
-/** 5. Extract operator unilateral exit timelock */
-const exitTimelock = {
+/** 5. Extract operator unilateral + boarding exit timelocks */
+const unilateralExitTimelock = {
   value: BigInt(operatorInfo.unilateralExitDelay),
+  type: "seconds",
+} as const satisfies RelativeTimelock;
+
+const boardingExitTimelock = {
+  value: BigInt(operatorInfo.boardingExitDelay),
   type: "seconds",
 } as const satisfies RelativeTimelock;
 
@@ -40,30 +46,45 @@ const delegateInfo = await delegate.getDelegateInfo();
 /** 7. Extract delegate x-only public key */
 const delegatePubkey = hex.decode(delegateInfo.pubkey).slice(1);
 
-/** 8. Construct default + delegated tapscripts for each deprecated signer */
+/** 8. Construct default + delegated + boarding tapscripts for each deprecated signer */
 const deprecatedTapscripts = deprecatedOperatorPubkeys.map((operatorPubkey) => {
   const defaultTapscript = new DefaultVtxo.Script({
     pubKey: userPubkey,
     serverPubKey: operatorPubkey,
-    csvTimelock: exitTimelock,
+    csvTimelock: unilateralExitTimelock,
   });
   const delegatedTapscript = new DelegateVtxo.Script({
     pubKey: userPubkey,
     serverPubKey: operatorPubkey,
     delegatePubKey: delegatePubkey,
-    csvTimelock: exitTimelock,
+    csvTimelock: unilateralExitTimelock,
   });
-  return { operatorPubkey, defaultTapscript, delegatedTapscript } as const;
+  const boardingTapscript = new DefaultVtxo.Script({
+    pubKey: userPubkey,
+    serverPubKey: operatorPubkey,
+    csvTimelock: boardingExitTimelock,
+  });
+  return {
+    operatorPubkey,
+    defaultTapscript,
+    delegatedTapscript,
+    boardingTapscript,
+  } as const;
 });
 
 /** 9. Log user public key, operator public key, delegate pubkey (if applicable), exit timelock, tweaked public key, script public key, and address for each deprecated tapscript */
 console.log(
   deprecatedTapscripts.flatMap(
-    ({ operatorPubkey, defaultTapscript, delegatedTapscript }) => [
+    ({
+      operatorPubkey,
+      defaultTapscript,
+      delegatedTapscript,
+      boardingTapscript,
+    }) => [
       {
         userPubkey: hex.encode(userPubkey),
         operatorPubkey: hex.encode(operatorPubkey),
-        exitTimelock,
+        exitTimelock: unilateralExitTimelock,
         tweakedPubKey: hex.encode(defaultTapscript.tweakedPublicKey),
         scriptPubKey: hex.encode(defaultTapscript.pkScript),
         address: defaultTapscript.address(undefined, operatorPubkey).encode(),
@@ -72,10 +93,18 @@ console.log(
         userPubkey: hex.encode(userPubkey),
         operatorPubkey: hex.encode(operatorPubkey),
         delegatePubkey: hex.encode(delegatePubkey),
-        exitTimelock,
+        exitTimelock: unilateralExitTimelock,
         tweakedPubKey: hex.encode(delegatedTapscript.tweakedPublicKey),
         scriptPubKey: hex.encode(delegatedTapscript.pkScript),
         address: delegatedTapscript.address(undefined, operatorPubkey).encode(),
+      },
+      {
+        userPubkey: hex.encode(userPubkey),
+        operatorPubkey: hex.encode(operatorPubkey),
+        exitTimelock: boardingExitTimelock,
+        tweakedPubKey: hex.encode(boardingTapscript.tweakedPublicKey),
+        scriptPubKey: hex.encode(boardingTapscript.pkScript),
+        address: boardingTapscript.onchainAddress(networks.bitcoin),
       },
     ],
   ),
