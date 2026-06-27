@@ -11,13 +11,13 @@ const XPUB =
   "xpub6BgBgsespWvERF3LHQu6CnqdvfEvtMcQjYrcRzx53QJjSxarj2afYWcLteoGVky7D3UKDP9QyrLprQ3VCECoY49yfdDEHGCtMMj92pReUsQ" as const; // xpub derived from SEED at m/86'/0'/0'
 const CHANGE_INDEX = "0" as const; // Change #0 (deposit)
 
-const DEFAULT_OPTIONS = {
+const SEED_OPTIONS = {
   isMainnet: true,
   descriptor: `tr([${FINGERPRINT}/${PURPOSE}/${COIN_TYPE}/${ACCOUNT}]${XPUB}/${CHANGE_INDEX}/*)`,
 } as const satisfies SeedIdentityOptions;
 
 /** 1. Create identity with explicit default options */
-const identity = SeedIdentity.fromSeed(hex.decode(SEED), DEFAULT_OPTIONS);
+const identity = SeedIdentity.fromSeed(hex.decode(SEED), SEED_OPTIONS);
 
 /** 2. Log descriptor, public keys, and message signature */
 console.log({
