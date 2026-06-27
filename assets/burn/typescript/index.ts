@@ -18,8 +18,8 @@ const OPERATOR_URL = "https://mutinynet.arkade.sh" as const;
 const DELEGATE_URL = "https://delegator.mutinynet.arkade.sh" as const;
 const EXPLORER_URL = "https://explorer.mutinynet.arkade.sh" as const;
 const IGNORE_ASSETS = [
-  "a256ef2be55efedf0f40d8af5eb7fe30bb7eb535594b0b9102c7ed0345ed9da40000",
-  "84cd7bd2a66e2b0219b4bff398fdd4e65015aee00ef5a42023acc6ffd63542b30000",
+  "3dcc62d9d8437f8f80249eaf2c62b1af612aff49c1bd6a904628c95c7b4f9eaa0000",
+  "952ce3af7dd640a80984962156b63e7b3d3f2726c22f46e14f81daac2297170b0000",
 ];
 
 /** 1. Polyfill EventSource
