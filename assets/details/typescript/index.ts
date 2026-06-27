@@ -12,9 +12,7 @@ const assetDetails = await indexer.getAssetDetails(ASSET_ID);
 
 if (!assetDetails.controlAssetId) {
   throw new Error("Expected control asset", {
-    cause: {
-      assetId: ASSET_ID,
-    },
+    cause: ASSET_ID,
   });
 }
 
