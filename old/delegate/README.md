@@ -11,7 +11,7 @@ Demonstrates:
 7. constructing signed forfeit transactions
 8. submitting a delegation request to the delegate
 
-Related: [arkade-address](https://github.com/arkade-os/demos/tree/master/arkade-address)
+Related: [arkade-address](https://github.com/arkade-os/demos/tree/master/old/arkade-address)
 
 ### TypeScript
 
