@@ -84,6 +84,7 @@ const { arkTxId: controlIssueTxid, assetId: controlAssetId } =
       ticker: "ctrl-TA",
       decimals: 0,
       icon: "https://assets.docs.arkadeos.com/orange.png",
+      customField: "This is a control asset with a custom field",
     },
   });
 
@@ -98,6 +99,7 @@ const { arkTxId: issueTxid, assetId } = await manager.issue({
     ticker: "TA",
     decimals: 2,
     icon: "https://assets.docs.arkadeos.com/purple.png",
+    customField: "This is a controlled asset with a custom field",
   },
 });
 
