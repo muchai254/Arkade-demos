@@ -9,15 +9,18 @@ import {
 
 const SEED_PHRASE =
   "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;
-const DELEGATE_URL = "https://delegate.arkade.money" as const;
+const OPERATOR_URL = "https://mutinynet.arkade.sh" as const;
+const DELEGATE_URL = "https://delegator.mutinynet.arkade.sh" as const;
 
 /** 1. Create identity */
-const identity = MnemonicIdentity.fromMnemonic(SEED_PHRASE);
+const identity = MnemonicIdentity.fromMnemonic(SEED_PHRASE, {
+  isMainnet: false,
+});
 
 /** 2. Create wallet */
 const wallet = await Wallet.create({
   identity,
-  arkProvider: new RestArkProvider(),
+  arkProvider: new RestArkProvider(OPERATOR_URL),
   delegateProvider: new RestDelegateProvider(DELEGATE_URL),
   /**
    * Explicitly disable settlement
