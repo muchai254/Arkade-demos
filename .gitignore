@@ -4,3 +4,5 @@
 **/rust/Cargo.lock
 *.sqlite
 *.DS_Store
+*.mmd
+*.svg
