@@ -38,11 +38,11 @@ for (const tx of chainTxs) {
   );
 
   for (const spend of tx.spends) {
-    const child = spend.split(":")[0];
-    const connection = `${tx.txid}->${child}`;
+    const parentTxid = spend.split(":")[0];
+    const connection = `${parentTxid}->${tx.txid}`;
     if (seenConnections.has(connection)) continue;
     seenConnections.add(connection);
-    lines.push(`${nodeId(tx.txid)} --> ${nodeId(child)}`);
+    lines.push(`${nodeId(parentTxid)} --> ${nodeId(tx.txid)}`);
   }
 }
 
