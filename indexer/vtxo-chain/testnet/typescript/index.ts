@@ -1,5 +1,7 @@
 import { ChainTxType, RestIndexerProvider } from "@arkade-os/sdk";
+import { base64urlnopad, utf8 } from "@scure/base";
 import { writeFile } from "node:fs/promises";
+import { deflateSync } from "node:zlib";
 
 const OUTPOINT = {
   txid: "6445acfc889873dedf9512c63518010a89d004882ba681d905519fabf21889f0",
@@ -7,6 +9,7 @@ const OUTPOINT = {
 } as const;
 
 const OPERATOR_URL = "https://mutinynet.arkade.sh" as const;
+const MERMAID_URL = "https://mermaid.live" as const;
 
 /** 1. Connect to indexer */
 const indexer = new RestIndexerProvider(OPERATOR_URL);
@@ -46,3 +49,20 @@ for (const tx of chainTxs) {
 await writeFile("dag.mmd", lines.join("\n"), "utf8");
 console.log("Wrote dag.mmd");
 console.log("Run 'pnpm render' to generate SVG");
+
+console.log("\nOpen in browser:");
+console.log(
+  `${MERMAID_URL}/view#pako:${base64urlnopad.encode(
+    deflateSync(
+      utf8.decode(
+        JSON.stringify({
+          code: lines.join("\n"),
+          mermaid: { theme: "default" },
+          autoSync: true,
+          updateDiagram: true,
+          editorMode: "preview",
+        }),
+      ),
+    ),
+  )}`,
+);
