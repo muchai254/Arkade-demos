@@ -37,7 +37,7 @@ const operatorInfo = await operator.getInfo();
 /** 4. Extract operator x-only public key */
 const operatorPubkey = hex.decode(operatorInfo.signerPubkey).slice(1);
 
-/** 5. Construct escrow tapscript */
+/** 5. Construct escrow tapscript with collaborative, dispute, and refund paths */
 const escrowTapscript = new VtxoScript([
   // Path 1: Buyer and seller both agree
   MultisigTapscript.encode({
