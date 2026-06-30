@@ -121,7 +121,7 @@ console.log(
   `Pay here: ${QRSERVER_URL}/v1/create-qr-code/?qzone=1&data=${result.invoice}`,
 );
 
-console.log("Monitoring for invoice payments...");
+console.log("Monitoring for payment...");
 console.log("(press Enter to close)");
 
 /** 8. Set up event listener for the updated swap */
