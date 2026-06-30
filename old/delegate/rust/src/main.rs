@@ -1,22 +1,24 @@
+use ark_client::key_provider::{KeyProvider, KeypairIndex};
+use ark_client::Bip32KeyProvider;
 use ark_core::intent::{self, IntentMessage};
 use ark_core::script::{csv_sig_script, multisig_3_of_3_script, multisig_script};
 use ark_core::server::VirtualTxOutPoint;
-use ark_core::{ArkAddress, UNSPENDABLE_KEY, anchor_output};
+use ark_core::{anchor_output, ArkAddress, UNSPENDABLE_KEY};
 use ark_delegator::{DelegateOptions, DelegatorClient};
 use ark_rest::Client;
 use bip39::Mnemonic;
-use bitcoin::base64::{Engine, engine::general_purpose::STANDARD};
+use bitcoin::base64::{engine::general_purpose::STANDARD, Engine};
 use bitcoin::bip32::{DerivationPath, Xpriv};
 use bitcoin::hashes::Hash;
-use bitcoin::key::{Keypair, PublicKey, Secp256k1};
+use bitcoin::key::{PublicKey, Secp256k1};
 use bitcoin::psbt::PsbtSighashType;
 use bitcoin::secp256k1::PublicKey as SecpPublicKey;
 use bitcoin::sighash::{Prevouts, SighashCache};
 use bitcoin::taproot::{LeafVersion, TaprootBuilder};
 use bitcoin::transaction::Version;
 use bitcoin::{
-    Amount, Psbt, ScriptBuf, Sequence, TapLeafHash, TapSighashType, Transaction, TxIn, TxOut,
-    Witness, absolute::LockTime,
+    absolute::LockTime, Amount, Psbt, ScriptBuf, Sequence, TapLeafHash, TapSighashType,
+    Transaction, TxIn, TxOut, Witness,
 };
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -31,7 +33,8 @@ const DELEGATE_IN_SECONDS: u64 = 60;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     println!("Setting up user identity...");
-    let mnemonic: Mnemonic = ALICE_SEED.parse()?;
+    let mnemonic = Mnemonic::parse_normalized(ALICE_SEED.trim())
+        .map_err(|e| anyhow::anyhow!("invalid mnemonic: {e}"))?;
     let seed = mnemonic.to_seed("");
     let secp = Secp256k1::new();
 
@@ -40,17 +43,18 @@ async fn main() -> anyhow::Result<()> {
     let server_info = client.get_info().await?;
     let network = server_info.network;
 
-    // Derive BIP86 keypair using the operator's reported network.
-
+    // Derive BIP86 keypair using the SDK's Bip32KeyProvider.
     let coin_type = if network == bitcoin::Network::Bitcoin {
         0u32
     } else {
         1u32
     };
     let master_xpriv = Xpriv::new_master(network, &seed)?;
-    let path = DerivationPath::from_str(&format!("m/86'/{coin_type}'/0'/0/0"))?;
-    let child_xpriv = master_xpriv.derive_priv(&secp, &path)?;
-    let keypair = Keypair::from_secret_key(&secp, &child_xpriv.private_key);
+    let base_path = DerivationPath::from_str(&format!("m/86'/{coin_type}'/0'/0"))?;
+    let key_provider = Bip32KeyProvider::new(master_xpriv, base_path);
+    let keypair = key_provider
+        .get_next_keypair(KeypairIndex::New)
+        .map_err(|e| anyhow::anyhow!("key derivation failed: {e}"))?;
     let (user_xonly, _) = keypair.x_only_public_key();
 
     let server_xonly = server_info.signer_pk.x_only_public_key().0;
