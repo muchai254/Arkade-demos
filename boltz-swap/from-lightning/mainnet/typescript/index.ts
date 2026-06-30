@@ -89,12 +89,7 @@ if (!swaps.swapManager) {
   throw new Error("Swap manager not auto-configured");
 }
 
-/** 6. Clear previous swaps
- * Not recommended for production!
- */
-await swaps.swapRepository.clear();
-
-/** 7. Create Lightning > Arkade swap */
+/** 6. Create Lightning > Arkade swap */
 const result = await swaps.createLightningInvoice({
   amount: 500,
   description: "Hello World!",
@@ -124,7 +119,7 @@ console.log(
 console.log("Monitoring for payment...");
 console.log("(press Enter to close)");
 
-/** 8. Set up event listener for the updated swap */
+/** 7. Set up event listener for the updated swap */
 const stopNotifyingSwaps = await swaps.swapManager?.onSwapUpdate(
   (swap: BoltzSwap) => {
     if (swap.type !== "reverse" && swap.id === result.pendingSwap.id) {
@@ -136,7 +131,7 @@ const stopNotifyingSwaps = await swaps.swapManager?.onSwapUpdate(
   },
 );
 
-/** 9. Subscribe for incoming funds for the claimed swap */
+/** 8. Subscribe for incoming funds for the claimed swap */
 const stopNotifyingWallet = await wallet.notifyIncomingFunds(async (event) => {
   /** Ignore boarding inputs */
   if (event.type === "utxo") return;
@@ -154,13 +149,17 @@ const stopNotifyingWallet = await wallet.notifyIncomingFunds(async (event) => {
   );
 });
 
-/** 10. Graceful shutdown */
+/** 9. Graceful shutdown */
 if (process.stdin.isTTY) {
   process.stdin.resume();
   process.stdin.once("data", async () => {
     try {
       console.log("Stopping swap notifications...");
       stopNotifyingSwaps();
+
+      // Not recommended for production!
+      console.log("Clearing swaps from DB...");
+      await swaps.swapRepository.clear();
 
       console.log("Disposing swaps...");
       await swaps.dispose();
