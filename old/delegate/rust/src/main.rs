@@ -28,7 +28,6 @@ const ALICE_SEED: &str =
 const OPERATOR_URL: &str = "https://mutinynet.arkade.sh";
 const DELEGATE_URL: &str = "https://delegator.mutinynet.arkade.sh";
 const DUST: u64 = 330;
-const DELEGATE_IN_SECONDS: u64 = 60;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -162,13 +161,7 @@ async fn main() -> anyhow::Result<()> {
                 bitcoin::ScriptBuf::from_hex(hex_str).ok()?
             };
 
-            if is_spent
-                || is_unrolled
-                || v["assets"]
-                    .as_array()
-                    .map(|a| !a.is_empty())
-                    .unwrap_or(false)
-            {
+            if is_spent || is_unrolled {
                 return None;
             }
             Some(VirtualTxOutPoint {
@@ -236,8 +229,7 @@ async fn main() -> anyhow::Result<()> {
             }),
         ];
 
-        let valid_at =
-            SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() + DELEGATE_IN_SECONDS;
+        let valid_at = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
 
         let message = IntentMessage::Register {
             onchain_output_indexes: vec![],
