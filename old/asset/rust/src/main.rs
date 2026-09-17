@@ -28,8 +28,9 @@ const ASSET_ICON: &str = "https://i.imgur.com/VxPZvIK.png";
 const ISSUE_AMOUNT: u64 = 100_000_000; // 100.000000 adjusted for 6 decimals
 const REISSUE_AMOUNT: u64 = 123_456; //   0.123456 adjusted for 6 decimals
 
-// the Rust SDK needs its own chain source and explorer links are built by hand
-const ESPLORA_URL: &str = "https://mempool.space/api";
+// the Rust SDK needs its own chain source; the TS and Go SDKs pick this URL from
+// the network the operator reports, and default to this one for mainnet
+const ESPLORA_URL: &str = "https://mempool.arkade.sh/api";
 const EXPLORER_URL: &str = "https://arkade.space/tx";
 
 type ArkClient = ark_client::Client<EsploraClient, Wallet, InMemorySwapStorage>;
@@ -41,16 +42,6 @@ fn asset_metadata() -> Vec<(String, String)> {
         ("ticker".to_string(), ASSET_TICKER.to_string()),
         ("decimals".to_string(), ASSET_DECIMALS.to_string()),
         ("icon".to_string(), ASSET_ICON.to_string()),
-    ]
-}
-
-fn control_asset_metadata() -> Vec<(String, String)> {
-    vec![
-        ("ticker".to_string(), format!("ctrl-{ASSET_TICKER}")),
-        (
-            "icon".to_string(),
-            "https://i.imgur.com/wWvxudd.png".to_string(),
-        ),
     ]
 }
 
@@ -163,44 +154,32 @@ async fn main() -> anyhow::Result<()> {
         summarize_balances(&client, &balance).await?
     );
 
-    // create new control asset
-    let control_issuance = client
-        .issue_asset(1, None, Some(control_asset_metadata()))
-        .await
-        .map_err(|e| anyhow::anyhow!(e))?;
-    let control_asset_id = *control_issuance
-        .asset_ids
-        .first()
-        .ok_or_else(|| anyhow::anyhow!("control asset issuance returned no asset id"))?;
-    println!(
-        "\nIssued new control asset: {EXPLORER_URL}/{}",
-        control_issuance.ark_txid
-    );
-    balance = client
-        .offchain_balance()
-        .await
-        .map_err(|e| anyhow::anyhow!(e))?;
-    println!(
-        "\nFetched updated balances: {}",
-        summarize_balances(&client, &balance).await?
-    );
-
-    // create new asset with control asset
-    let new_issuance = client
+    // create new control asset, and the new asset it controls
+    
+    let issuance = client
         .issue_asset(
             ISSUE_AMOUNT,
-            Some(ControlAssetConfig::existing(control_asset_id)),
+            Some(ControlAssetConfig::new(1).map_err(|e| anyhow::anyhow!(e))?),
             Some(asset_metadata()),
         )
         .await
         .map_err(|e| anyhow::anyhow!(e))?;
-    let new_asset_id = *new_issuance
+    let control_asset_id = *issuance
         .asset_ids
         .first()
-        .ok_or_else(|| anyhow::anyhow!("asset issuance returned no asset id"))?;
+        .ok_or_else(|| anyhow::anyhow!("issuance returned no control asset id"))?;
+    let new_asset_id = *issuance
+        .asset_ids
+        .get(1)
+        .ok_or_else(|| anyhow::anyhow!("issuance returned no asset id"))?;
+    // both assets share metadata, so print the ids to tell them apart in the balances
     println!(
-        "\nIssued new asset with control asset: {EXPLORER_URL}/{}",
-        new_issuance.ark_txid
+        "\nIssued new control asset [{control_asset_id}]: {EXPLORER_URL}/{}",
+        issuance.ark_txid
+    );
+    println!(
+        "Issued new asset with control asset [{new_asset_id}] in the same transaction: {EXPLORER_URL}/{}",
+        issuance.ark_txid
     );
     balance = client
         .offchain_balance()
