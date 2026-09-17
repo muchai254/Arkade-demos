@@ -8,6 +8,8 @@ use ark_client::OfflineClientConfig;
 use ark_core::asset::ControlAssetConfig;
 use ark_core::send::SendReceiver;
 use ark_core::Asset;
+use ark_rest::Client as RestClient;
+use bitcoin::hex::FromHex;
 use bitcoin::key::Secp256k1;
 use bitcoin::secp256k1::SecretKey;
 use bitcoin::Network;
@@ -28,10 +30,24 @@ const ASSET_ICON: &str = "https://i.imgur.com/VxPZvIK.png";
 const ISSUE_AMOUNT: u64 = 100_000_000; // 100.000000 adjusted for 6 decimals
 const REISSUE_AMOUNT: u64 = 123_456; //   0.123456 adjusted for 6 decimals
 
-// the Rust SDK needs its own chain source; the TS and Go SDKs pick this URL from
-// the network the operator reports, and default to this one for mainnet
-const ESPLORA_URL: &str = "https://mempool.arkade.sh/api";
-const EXPLORER_URL: &str = "https://arkade.space/tx";
+const DEFAULT_ARK_SERVER_URL: &str = "https://arkade.computer";
+const DEFAULT_EXPLORER_URL: &str = "https://arkade.space/tx";
+
+fn default_esplora_url(network: Network) -> &'static str {
+    match network {
+        Network::Bitcoin => "https://mempool.arkade.sh/api",
+        Network::Signet => "https://mempool.mutinynet.arkade.sh/api",
+        Network::Testnet => "https://mempool.space/testnet/api",
+        _ => "http://127.0.0.1:3000",
+    }
+}
+
+fn default_boltz_url(network: Network) -> &'static str {
+    match network {
+        Network::Bitcoin => "https://api.boltz.exchange",
+        _ => "https://api.boltz.mutinynet.arkade.sh",
+    }
+}
 
 type ArkClient = ark_client::Client<EsploraClient, Wallet, InMemorySwapStorage>;
 
@@ -45,22 +61,51 @@ fn asset_metadata() -> Vec<(String, String)> {
     ]
 }
 
-// metadata comes back from the SDK as one opaque string, so pull single values
-// out of it, accepting either a JSON object or comma-separated `key=value` pairs
-fn metadata_value(metadata: &str, key: &str) -> Option<String> {
-    if let Ok(serde_json::Value::Object(map)) = serde_json::from_str(metadata) {
-        if let Some(value) = map.get(key) {
-            return Some(match value.as_str() {
-                Some(string) => string.to_string(),
-                None => value.to_string(),
-            });
+fn decode_metadata(metadata: &str) -> Option<Vec<(String, String)>> {
+    let bytes = Vec::<u8>::from_hex(metadata).ok()?;
+    let mut cursor = 0;
+
+    let read_uvarint = |cursor: &mut usize| -> Option<u64> {
+        let mut value = 0u64;
+        let mut shift = 0;
+        loop {
+            let byte = *bytes.get(*cursor)?;
+            *cursor += 1;
+            value |= u64::from(byte & 0x7f) << shift;
+            if byte & 0x80 == 0 {
+                return Some(value);
+            }
+            shift += 7;
+            if shift > 63 {
+                return None;
+            }
         }
+    };
+
+    let read_string = |cursor: &mut usize| -> Option<String> {
+        let len = read_uvarint(cursor)? as usize;
+        let end = cursor.checked_add(len)?;
+        let slice = bytes.get(*cursor..end)?;
+        *cursor = end;
+        String::from_utf8(slice.to_vec()).ok()
+    };
+
+    let count = read_uvarint(&mut cursor)?;
+    let mut entries = Vec::new();
+    for _ in 0..count {
+        let key = read_string(&mut cursor)?;
+        let value = read_string(&mut cursor)?;
+        entries.push((key, value));
     }
 
-    metadata.split(',').find_map(|pair| {
-        let (found, value) = pair.split_once('=')?;
-        (found.trim() == key).then(|| value.trim().to_string())
-    })
+    Some(entries)
+}
+
+fn metadata_value(metadata: &str, key: &str) -> Option<String> {
+    decode_metadata(metadata)?
+        .into_iter()
+        .find(|(found, _)| found == key)
+        .map(|(_, value)| value)
 }
 
 // helper for creating human-readable balances
@@ -99,12 +144,26 @@ async fn main() -> anyhow::Result<()> {
     // create wallet
     let secp = Secp256k1::new();
     let keypair = SecretKey::from_str(PRIVATE_KEY)?.keypair(&secp);
-    let blockchain = Arc::new(EsploraClient::new(ESPLORA_URL)?);
-    let wallet = Arc::new(Wallet::new(keypair, Network::Bitcoin, ESPLORA_URL)?);
+
+    let ark_server_url =
+        std::env::var("ARK_SERVER_URL").unwrap_or_else(|_| DEFAULT_ARK_SERVER_URL.to_string());
+    let explorer_url =
+        std::env::var("EXPLORER_URL").unwrap_or_else(|_| DEFAULT_EXPLORER_URL.to_string());
+
+    let server_info = RestClient::new(ark_server_url.clone())?.get_info().await?;
+    let network = server_info.network;
+    let esplora_url =
+        std::env::var("ESPLORA_URL").unwrap_or_else(|_| default_esplora_url(network).to_string());
+
+    let blockchain = Arc::new(EsploraClient::new(&esplora_url)?);
+    let wallet = Arc::new(Wallet::new(keypair, network, &esplora_url)?);
     let storage = Arc::new(InMemorySwapStorage::new());
     let client = OfflineClient::with_keypair(
-        // the default config already targets mainnet
-        OfflineClientConfig::default(),
+        OfflineClientConfig {
+            ark_server_url,
+            boltz_url: default_boltz_url(network).to_string(),
+            ..Default::default()
+        },
         keypair,
         blockchain,
         wallet,
@@ -120,7 +179,6 @@ async fn main() -> anyhow::Result<()> {
         .await
         .map_err(|e| anyhow::anyhow!(e))?;
     println!("Created wallet with address: {}", address.encode());
-
     // get initial balance
     let mut balance = client
         .offchain_balance()
@@ -138,7 +196,7 @@ async fn main() -> anyhow::Result<()> {
             .burn_asset(asset_id, amount)
             .await
             .map_err(|e| anyhow::anyhow!(e))?;
-        burn_tx_ids.push(format!("{EXPLORER_URL}/{burn_tx_id}"));
+        burn_tx_ids.push(format!("{explorer_url}/{burn_tx_id}"));
     }
     println!(
         "\nBurned {} existing assets: {}",
@@ -155,7 +213,7 @@ async fn main() -> anyhow::Result<()> {
     );
 
     // create new control asset, and the new asset it controls
-    
+
     let issuance = client
         .issue_asset(
             ISSUE_AMOUNT,
@@ -174,11 +232,11 @@ async fn main() -> anyhow::Result<()> {
         .ok_or_else(|| anyhow::anyhow!("issuance returned no asset id"))?;
     // both assets share metadata, so print the ids to tell them apart in the balances
     println!(
-        "\nIssued new control asset [{control_asset_id}]: {EXPLORER_URL}/{}",
+        "\nIssued new control asset [{control_asset_id}]: {explorer_url}/{}",
         issuance.ark_txid
     );
     println!(
-        "Issued new asset with control asset [{new_asset_id}] in the same transaction: {EXPLORER_URL}/{}",
+        "Issued new asset with control asset [{new_asset_id}] in the same transaction: {explorer_url}/{}",
         issuance.ark_txid
     );
     balance = client
@@ -195,7 +253,7 @@ async fn main() -> anyhow::Result<()> {
         .reissue_asset(new_asset_id, REISSUE_AMOUNT)
         .await
         .map_err(|e| anyhow::anyhow!(e))?;
-    println!("\nReissued same asset with control asset: {EXPLORER_URL}/{reissue_tx_id}");
+    println!("\nReissued same asset with control asset: {explorer_url}/{reissue_tx_id}");
     balance = client
         .offchain_balance()
         .await
@@ -224,7 +282,7 @@ async fn main() -> anyhow::Result<()> {
         }])
         .await
         .map_err(|e| anyhow::anyhow!(e))?;
-    println!("\nSent everything in wallet to self: {EXPLORER_URL}/{sweep_tx_id}");
+    println!("\nSent everything in wallet to self: {explorer_url}/{sweep_tx_id}");
     balance = client
         .offchain_balance()
         .await
